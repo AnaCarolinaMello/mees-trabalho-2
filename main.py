@@ -477,6 +477,7 @@ class GitHubAnalyzer:
                 print(f"✅ Repositório processado com sucesso")
             else:
                 print(f"❌ Falha no processamento do repositório")
+                
             
             # Pausa entre repositórios para evitar sobrecarga
             if i < len(repositories):
@@ -594,16 +595,41 @@ def main():
             
             if processed_repos:
                 # Estatísticas das métricas CK
-                total_classes = [r.get('total_classes', 0) for r in processed_repos if r.get('total_classes')]
-                avg_wmc_values = [r.get('avg_wmc', 0) for r in processed_repos if r.get('avg_wmc')]
-                avg_cbo_values = [r.get('avg_cbo', 0) for r in processed_repos if r.get('avg_cbo')]
+                stars = [r.get('stars', 0) for r in processed_repos if r.get('stars')]
+                avg_loc = [r.get('avg_loc', 0) for r in processed_repos if r.get('avg_loc')]
+                releases = [r.get('releases', 0) for r in processed_repos if r.get('releases')]
+                age = [r.get('age_days', 0) for r in processed_repos if r.get('age_days')]
+
+                cbo = [r.get('avg_cbo', 0) for r in processed_repos if r.get('avg_cbo')]
+                dit = [r.get('avg_dit', 0) for r in processed_repos if r.get('avg_dit')]
+                lcom = [r.get('avg_lcom', 0) for r in processed_repos if r.get('avg_lcom')]
+
                 
-                if total_classes:
-                    print(f"Média de classes por repositório: {sum(total_classes)/len(total_classes):.1f}")
-                if avg_wmc_values:
-                    print(f"WMC médio: {sum(avg_wmc_values)/len(avg_wmc_values):.2f}")
-                if avg_cbo_values:
-                    print(f"CBO médio: {sum(avg_cbo_values)/len(avg_cbo_values):.2f}")
+                
+                print('Métricas de processo:  \n')
+
+                if stars:
+                    print(f"Média de estrelas por repositório: {sum(stars)/len(stars):.1f} ⭐")
+                if avg_loc:
+                    print(f"Linhas de código: {sum(avg_loc)/len(avg_loc):.2f}")
+                if releases:
+                    print(f"Atividade: {sum(releases)/len(releases):.2f}")
+                if age:
+                    print(f"Maturidade: {sum(age)/len(age):.2f}")
+
+                print('\n ---------------------------------------- \n')
+
+
+                print('Métricas de qualidade:  \n')
+
+                if cbo:
+                    print(f"CBO Médio: {sum(cbo)/len(cbo):.2f}")
+                if dit:
+                    print(f"DIT Médio: {sum(dit)/len(dit):.2f}")
+
+                if lcom:
+                    print(f"LCOM Médio: {sum(lcom)/len(lcom):.2f}")
+
         else:
             print("Nenhum repositório foi processado com sucesso.")
     
