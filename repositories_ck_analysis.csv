@@ -1,0 +1,3 @@
+name,owner,url,description,stars,age_days,primary_language,total_releases,created_at,total_classes,total_methods,total_fields,total_variables,avg_wmc,avg_cbo,avg_lcom,avg_dit,avg_noc,avg_rfc,avg_loc,avg_cc
+JavaGuide,Snailclimb,https://github.com/Snailclimb/JavaGuide,「Java学习+面试指南」一份涵盖大部分 Java 程序员所需要掌握的核心知识。准备 Java 面试，首选 JavaGuide！,151499,2673,Java,0,2018-05-07T13:27:00Z,0,0,0,0,0,0,0,0,0,0,0,0
+hello-algo,krahets,https://github.com/krahets/hello-algo,"《Hello 算法》：动画图解、一键运行的数据结构与算法教程。支持 Python, Java, C++, C, C#, JS, Go, Swift, Rust, Ruby, Kotlin, TS, Dart 代码。简体版和繁体版同步更新，English version in translation",115966,1031,Java,9,2022-11-04T11:08:34Z,215,793,204,2531,8.748837209302325,1.8744186046511628,4.706976744186046,1.0,0.0,6.553488372093023,35.84651162790698,0

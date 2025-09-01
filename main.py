@@ -2,7 +2,11 @@ import requests
 import json
 import csv
 import os
+import subprocess
+import shutil
+import tempfile
 from datetime import datetime
+from pathlib import Path
 import time
 
 class GitHubAnalyzer:
@@ -17,6 +21,8 @@ class GitHubAnalyzer:
             "Content-Type": "application/json"
         }
         self.base_url = "https://api.github.com/graphql"
+        self.temp_dir = tempfile.mkdtemp()
+        self.ck_jar_path = "ck/target/ck-0.7.1-SNAPSHOT-jar-with-dependencies.jar"
     
     def create_graphql_query(self, cursor=None):
         """
@@ -167,26 +173,347 @@ class GitHubAnalyzer:
         print(f"Coleta finalizada. Total coletado: {len(repositories)} repositórios")
         return repositories
     
-    def save_to_csv(self, repositories, filename="repositories_1000_data.csv"):
+    def clone_repository(self, repo_url, repo_name):
         """
-        Salva os dados dos repositórios em arquivo CSV
+        Clona um repositório para análise
         """
-
-        if not repositories:
-            print("Nenhum dado para salvar")
-            return
+        clone_path = os.path.join(self.temp_dir, repo_name)
         
+        try:
+            if os.path.exists(clone_path):
+                shutil.rmtree(clone_path)
+            
+            print(f"Clonando repositório: {repo_url}")
+            subprocess.run([
+                "git", "clone", "--depth", "1", repo_url, clone_path
+            ], check=True, capture_output=True, text=True)
+            
+            return clone_path
+            
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao clonar repositório {repo_url}: {e}")
+            return None
+    
+    def run_ck_analysis(self, repo_path):
+        """
+        Executa análise CK no repositório clonado
+        """
+        try:
+            if not os.path.exists(self.ck_jar_path):
+                print(f"Arquivo CK não encontrado: {self.ck_jar_path}")
+                return None
+            
+            # Garante que a pasta temp existe
+            temp_path = "temp"
+            os.makedirs(temp_path, exist_ok=True)
+            
+            print(f"Executando análise CK em: {repo_path}")
+            
+            # Comando para executar CK
+            cmd = [
+                "java", "-jar", self.ck_jar_path,
+                repo_path,
+                "true",  # usar diretórios
+                "0",     # máximo arquivos
+                "true",  # usar jarfiles
+                "temp/"
+            ]
+            
+            result = subprocess.run(
+                cmd, 
+                capture_output=True, 
+                text=True, 
+                cwd=os.getcwd(),
+                timeout=300  # 5 minutos timeout
+            )
+            
+            if result.returncode == 0:
+                print("Análise CK concluída com sucesso")
+                return self.parse_ck_results_from_temp()
+            else:
+                print(f"Erro na análise CK: {result.stderr}")
+                return None
+                
+        except subprocess.TimeoutExpired:
+            print("Timeout na análise CK")
+            return None
+        except Exception as e:
+            print(f"Erro ao executar CK: {e}")
+            return None
+    
+    def parse_ck_results_from_temp(self):
+        """
+        Parse dos resultados do CK da pasta temp/
+        """
+        temp_path = "temp"
+        
+        try:
+            # Arquivos CK gerados na pasta temp/
+            class_csv = os.path.join(temp_path, "class.csv")
+            method_csv = os.path.join(temp_path, "method.csv") 
+            field_csv = os.path.join(temp_path, "field.csv")
+            variable_csv = os.path.join(temp_path, "variable.csv")
+            
+            metrics = {
+                'total_classes': 0,
+                'total_methods': 0,
+                'total_fields': 0,
+                'total_variables': 0,
+                'avg_wmc': 0,
+                'avg_cbo': 0,
+                'avg_lcom': 0,
+                'avg_dit': 0,
+                'avg_noc': 0,
+                'avg_rfc': 0,
+                'avg_loc': 0,
+                'avg_cc': 0
+            }
+            
+            print(f"Extraindo métricas dos arquivos CSV...")
+            
+            # Parse class metrics
+            if os.path.exists(class_csv):
+                print(f"Processando {class_csv}")
+                with open(class_csv, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    classes = list(reader)
+                    metrics['total_classes'] = len(classes)
+                    
+                    if classes:
+                        metrics['avg_wmc'] = sum(float(c.get('wmc', 0)) for c in classes) / len(classes)
+                        metrics['avg_cbo'] = sum(float(c.get('cbo', 0)) for c in classes) / len(classes)
+                        metrics['avg_lcom'] = sum(float(c.get('lcom', 0)) for c in classes) / len(classes)
+                        metrics['avg_dit'] = sum(float(c.get('dit', 0)) for c in classes) / len(classes)
+                        metrics['avg_noc'] = sum(float(c.get('noc', 0)) for c in classes) / len(classes)
+                        metrics['avg_rfc'] = sum(float(c.get('rfc', 0)) for c in classes) / len(classes)
+                        metrics['avg_loc'] = sum(float(c.get('loc', 0)) for c in classes) / len(classes)
+            
+            # Parse method metrics
+            if os.path.exists(method_csv):
+                print(f"Processando {method_csv}")
+                with open(method_csv, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    methods = list(reader)
+                    metrics['total_methods'] = len(methods)
+                    
+                    if methods:
+                        cc_values = [float(m.get('cc', 0)) for m in methods if m.get('cc')]
+                        if cc_values:
+                            metrics['avg_cc'] = sum(cc_values) / len(cc_values)
+            
+            # Parse field metrics
+            if os.path.exists(field_csv):
+                print(f"Processando {field_csv}")
+                with open(field_csv, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    fields = list(reader)
+                    metrics['total_fields'] = len(fields)
+            
+            # Parse variable metrics
+            if os.path.exists(variable_csv):
+                print(f"Processando {variable_csv}")
+                with open(variable_csv, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    variables = list(reader)
+                    metrics['total_variables'] = len(variables)
+            
+            # Limpa arquivos CSV da pasta temp
+            self.cleanup_temp_csv_files()
+            
+            print(f"✓ Métricas extraídas: {metrics['total_classes']} classes, {metrics['total_methods']} métodos")
+            return metrics
+            
+        except Exception as e:
+            print(f"Erro ao parsear resultados CK: {e}")
+            # Tenta limpar arquivos mesmo em caso de erro
+            self.cleanup_temp_csv_files()
+            return None
+    
+    def cleanup_temp_csv_files(self):
+        """
+        Remove arquivos CSV da pasta temp após extrair métricas
+        """
+        temp_path = "temp"
+        csv_files = ["class.csv", "method.csv", "field.csv", "variable.csv"]
+        
+        for csv_file in csv_files:
+            file_path = os.path.join(temp_path, csv_file)
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"🗑️ Removido: {csv_file}")
+            except Exception as e:
+                print(f"Erro ao remover {csv_file}: {e}")
+    
+    def process_single_repository(self, repo):
+        """
+        Processa um único repositório: clona, executa CK e retorna métricas
+        """
+        repo_name = f"{repo['owner']}_{repo['name']}"
+        clone_url = f"https://github.com/{repo['owner']}/{repo['name']}.git"
+        
+        print(f"\nProcessando repositório: {repo['owner']}/{repo['name']}")
+        
+        # Clona repositório
+        repo_path = self.clone_repository(clone_url, repo_name)
+        if not repo_path:
+            return None
+        
+        try:
+            # Executa análise CK
+            ck_metrics = self.run_ck_analysis(repo_path)
+            
+            if ck_metrics:
+                # Combina dados do repositório com métricas CK
+                result = {
+                    'name': repo['name'],
+                    'owner': repo['owner'],
+                    'url': repo['url'],
+                    'description': repo['description'],
+                    'stars': repo['stars'],
+                    'age_days': repo['age_days'],
+                    'primary_language': repo['primary_language'],
+                    'total_releases': repo['total_releases'],
+                    'created_at': repo['created_at'],
+                    **ck_metrics
+                }
+                
+                # Limpa repositório imediatamente após análise bem-sucedida
+                print(f"Análise CK concluída. Removendo repositório clonado...")
+                self.cleanup_repo(repo_path)
+                
+                return result
+            else:
+                print(f"Falha na análise CK para {repo_name}")
+                # Limpa repositório mesmo em caso de falha
+                print(f"Removendo repositório clonado...")
+                self.cleanup_repo(repo_path)
+                return None
+                
+        except Exception as e:
+            print(f"Erro durante processamento: {e}")
+            # Limpa repositório em caso de erro
+            print(f"Removendo repositório clonado...")
+            self.cleanup_repo(repo_path)
+            return None
+    
+    def append_to_csv(self, repo_data, filename="repositories_ck_analysis.csv"):
+        """
+        Adiciona uma linha ao CSV (para processamento incremental)
+        """
         fieldnames = [
             'name', 'owner', 'url', 'description', 'stars',
-            'age_days', 'primary_language', 'total_releases', 'created_at'
+            'age_days', 'primary_language', 'total_releases', 'created_at',
+            'total_classes', 'total_methods', 'total_fields', 'total_variables',
+            'avg_wmc', 'avg_cbo', 'avg_lcom', 'avg_dit', 'avg_noc', 'avg_rfc',
+            'avg_loc', 'avg_cc'
         ]
         
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(repositories)
+        file_exists = os.path.exists(filename)
         
-        print(f"Dados salvos em {filename}")
+        with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(repo_data)
+        
+        print(f"Dados de {repo_data['owner']}/{repo_data['name']} adicionados ao CSV")
+    
+    def analyze_repositories_with_ck(self, limit=10):
+        """
+        Coleta TODOS os repositórios primeiro, depois processa um por um com CK
+        """
+        csv_filename = "repositories_ck_analysis.csv"
+        
+        # PRIMEIRO: Remove CSV antigo se existir
+        if os.path.exists(csv_filename):
+            try:
+                os.remove(csv_filename)
+                print(f"🗑️ CSV antigo removido: {csv_filename}")
+            except Exception as e:
+                print(f"Erro ao remover CSV antigo: {e}")
+        
+        print(f"Iniciando coleta de repositórios...")
+        
+        # SEGUNDO: Coleta TODOS os dados dos repositórios
+        repositories = self.collect_repositories_data(limit)
+        
+        if not repositories:
+            print("Nenhum repositório encontrado")
+            return []
+        
+        print(f"\n{'='*60}")
+        print(f"COLETA FINALIZADA!")
+        print(f"Total de repositórios coletados: {len(repositories)}")
+        print(f"Dados completos salvos na variável 'repositories'")
+        print(f"{'='*60}")
+        
+        # Exibe resumo dos repositórios coletados
+        print("\nRepositórios que serão analisados:")
+        for i, repo in enumerate(repositories, 1):
+            print(f"{i:3d}. {repo['owner']}/{repo['name']} ({repo['stars']:,} ⭐)")
+        
+        print(f"\n{'='*60}")
+        print("INICIANDO ANÁLISE CK...")
+        print(f"{'='*60}")
+        
+        processed_repos = []
+        
+        # SEGUNDO: Processa cada repositório com CK (um por vez)
+        for i, repo in enumerate(repositories, 1):
+            print(f"\n{'='*60}")
+            print(f"ANALISANDO {i}/{len(repositories)}: {repo['owner']}/{repo['name']}")
+            print(f"URL: {repo['url']}")
+            print(f"Stars: {repo['stars']:,} | Linguagem: {repo['primary_language']}")
+            print(f"{'='*60}")
+            
+            # Processa repositório individual
+            result = self.process_single_repository(repo)
+            
+            if result:
+                # Adiciona ao CSV imediatamente
+                self.append_to_csv(result, csv_filename)
+                processed_repos.append(result)
+                print(f"✅ Repositório processado com sucesso")
+            else:
+                print(f"❌ Falha no processamento do repositório")
+            
+            # Pausa entre repositórios para evitar sobrecarga
+            if i < len(repositories):
+                print("Aguardando 3 segundos...")
+                time.sleep(3)
+        
+        print(f"\n{'='*60}")
+        print(f"ANÁLISE CK FINALIZADA!")
+        print(f"Repositórios processados com sucesso: {len(processed_repos)}/{len(repositories)}")
+        print(f"Resultados salvos em: {csv_filename}")
+        print(f"{'='*60}")
+        
+        return processed_repos
+    
+    def cleanup_repo(self, repo_path):
+        """
+        Remove um repositório específico imediatamente
+        """
+        try:
+            if repo_path and os.path.exists(repo_path):
+                shutil.rmtree(repo_path)
+                print(f"✓ Repositório removido: {os.path.basename(repo_path)}")
+                return True
+        except Exception as e:
+            print(f"✗ Erro ao remover repositório {repo_path}: {e}")
+            return False
+    
+    def cleanup(self):
+        """
+        Limpa diretório temporário completo
+        """
+        try:
+            if os.path.exists(self.temp_dir):
+                shutil.rmtree(self.temp_dir)
+                print(f"Diretório temporário removido: {self.temp_dir}")
+        except Exception as e:
+            print(f"Erro ao limpar diretório temporário: {e}")
     
     def print_summary(self, repositories):
         """
@@ -254,15 +581,39 @@ def main():
         return
 
     analyzer = GitHubAnalyzer(token)
-
-    repositories = analyzer.collect_repositories_data(limit=1000)
     
-    if repositories:
-        analyzer.save_to_csv(repositories)
- 
-        analyzer.print_summary(repositories)
-    else:
-        print("Falha na coleta de dados.")
+    try:
+        # Processa repositórios com análise CK (um por vez)
+        processed_repos = analyzer.analyze_repositories_with_ck(limit=5)
+        
+        if processed_repos:
+            print(f"\n{'='*60}")
+            print("RESUMO DA ANÁLISE CK")
+            print(f"{'='*60}")
+            print(f"Repositórios analisados: {len(processed_repos)}")
+            
+            if processed_repos:
+                # Estatísticas das métricas CK
+                total_classes = [r.get('total_classes', 0) for r in processed_repos if r.get('total_classes')]
+                avg_wmc_values = [r.get('avg_wmc', 0) for r in processed_repos if r.get('avg_wmc')]
+                avg_cbo_values = [r.get('avg_cbo', 0) for r in processed_repos if r.get('avg_cbo')]
+                
+                if total_classes:
+                    print(f"Média de classes por repositório: {sum(total_classes)/len(total_classes):.1f}")
+                if avg_wmc_values:
+                    print(f"WMC médio: {sum(avg_wmc_values)/len(avg_wmc_values):.2f}")
+                if avg_cbo_values:
+                    print(f"CBO médio: {sum(avg_cbo_values)/len(avg_cbo_values):.2f}")
+        else:
+            print("Nenhum repositório foi processado com sucesso.")
+    
+    except KeyboardInterrupt:
+        print("\n\nInterrompido pelo usuário.")
+    except Exception as e:
+        print(f"\nErro durante a execução: {e}")
+    finally:
+        # Limpa diretório temporário
+        analyzer.cleanup()
 
 
 if __name__ == "__main__":
