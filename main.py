@@ -250,9 +250,6 @@ class GitHubAnalyzer:
         try:
             # Arquivos CK gerados na pasta temp/
             class_csv = os.path.join(temp_path, "class.csv")
-            method_csv = os.path.join(temp_path, "method.csv") 
-            field_csv = os.path.join(temp_path, "field.csv")
-            variable_csv = os.path.join(temp_path, "variable.csv")
             
             metrics = {
                 'total_classes': 0,
@@ -260,12 +257,12 @@ class GitHubAnalyzer:
                 'total_fields': 0,
                 'total_variables': 0,
                 'avg_wmc': 0,
-                'avg_cbo': 0,
-                'avg_lcom': 0,
-                'avg_dit': 0,
+                'cbo': 0,
+                'lcom': 0,
+                'dit': 0,
                 'avg_noc': 0,
                 'avg_rfc': 0,
-                'avg_loc': 0,
+                'loc': 0,
                 'avg_cc': 0
             }
             
@@ -280,47 +277,15 @@ class GitHubAnalyzer:
                     metrics['total_classes'] = len(classes)
                     
                     if classes:
-                        metrics['avg_wmc'] = sum(float(c.get('wmc', 0)) for c in classes) / len(classes)
-                        metrics['avg_cbo'] = sum(float(c.get('cbo', 0)) for c in classes) / len(classes)
-                        metrics['avg_lcom'] = sum(float(c.get('lcom', 0)) for c in classes) / len(classes)
-                        metrics['avg_dit'] = sum(float(c.get('dit', 0)) for c in classes) / len(classes)
-                        metrics['avg_noc'] = sum(float(c.get('noc', 0)) for c in classes) / len(classes)
-                        metrics['avg_rfc'] = sum(float(c.get('rfc', 0)) for c in classes) / len(classes)
-                        metrics['avg_loc'] = sum(float(c.get('loc', 0)) for c in classes) / len(classes)
-            
-            # Parse method metrics
-            if os.path.exists(method_csv):
-                print(f"Processando {method_csv}")
-                with open(method_csv, 'r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    methods = list(reader)
-                    metrics['total_methods'] = len(methods)
-                    
-                    if methods:
-                        cc_values = [float(m.get('cc', 0)) for m in methods if m.get('cc')]
-                        if cc_values:
-                            metrics['avg_cc'] = sum(cc_values) / len(cc_values)
-            
-            # Parse field metrics
-            if os.path.exists(field_csv):
-                print(f"Processando {field_csv}")
-                with open(field_csv, 'r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    fields = list(reader)
-                    metrics['total_fields'] = len(fields)
-            
-            # Parse variable metrics
-            if os.path.exists(variable_csv):
-                print(f"Processando {variable_csv}")
-                with open(variable_csv, 'r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    variables = list(reader)
-                    metrics['total_variables'] = len(variables)
+                        metrics['cbo'] = sum(float(c.get('cbo', 0)) for c in classes)
+                        metrics['lcom'] = sum(float(c.get('lcom', 0)) for c in classes)
+                        metrics['dit'] = sum(float(c.get('dit', 0)) for c in classes)
+                        metrics['loc'] = sum(float(c.get('loc', 0)) for c in classes)
             
             # Limpa arquivos CSV da pasta temp
             self.cleanup_temp_csv_files()
             
-            print(f"✓ Métricas extraídas: {metrics['total_classes']} classes, {metrics['total_methods']} métodos")
+            print(f"✓ Métricas extraídas: {metrics['total_classes']} classes")
             return metrics
             
         except Exception as e:
@@ -405,8 +370,8 @@ class GitHubAnalyzer:
             'name', 'owner', 'url', 'description', 'stars',
             'age_days', 'primary_language', 'total_releases', 'created_at',
             'total_classes', 'total_methods', 'total_fields', 'total_variables',
-            'avg_wmc', 'avg_cbo', 'avg_lcom', 'avg_dit', 'avg_noc', 'avg_rfc',
-            'avg_loc', 'avg_cc'
+            'avg_wmc', 'cbo', 'lcom', 'dit', 'avg_noc', 'avg_rfc',
+            'loc', 'avg_cc'
         ]
         
         file_exists = os.path.exists(filename)
@@ -536,19 +501,19 @@ class GitHubAnalyzer:
         
         print(f"\nIdade dos repositórios:")
         print(f"  Mediana: {sorted(ages)[len(ages)//2]} dias")
-        print(f"  Média: {sum(ages)/len(ages):.1f} dias")
+        print(f"  Média: {sum(ages)/len(repositories):.1f} dias")
         print(f"  Mínima: {min(ages)} dias")
         print(f"  Máxima: {max(ages)} dias")
         
         print(f"\nEstrelas:")
         print(f"  Mediana: {sorted(stars)[len(stars)//2]:,}")
-        print(f"  Média: {sum(stars)/len(stars):.1f} dias")
+        print(f"  Média: {sum(stars)/len(repositories):.1f} dias")
         print(f"  Mínima: {min(stars):,}")
         print(f"  Máxima: {max(stars):,}")
 
         print(f"\nReleases:")
         print(f"  Mediana: {sorted(releases)[len(releases)//2]:,}")
-        print(f"  Média: {sum(releases)/len(releases):.1f}")
+        print(f"  Média: {sum(releases)/len(repositories):.1f}")
         print(f"  Máximo: {max(releases):,}")
 
 def load_env_file():
@@ -585,7 +550,7 @@ def main():
     
     try:
         # Processa repositórios com análise CK (um por vez)
-        processed_repos = analyzer.analyze_repositories_with_ck(limit=5)
+        processed_repos = analyzer.analyze_repositories_with_ck(limit=2)
         
         if processed_repos:
             print(f"\n{'='*60}")
@@ -596,26 +561,26 @@ def main():
             if processed_repos:
                 # Estatísticas das métricas CK
                 stars = [r.get('stars', 0) for r in processed_repos if r.get('stars')]
-                avg_loc = [r.get('avg_loc', 0) for r in processed_repos if r.get('avg_loc')]
+                loc = [r.get('loc', 0) for r in processed_repos if r.get('loc')]
                 releases = [r.get('releases', 0) for r in processed_repos if r.get('releases')]
                 age = [r.get('age_days', 0) for r in processed_repos if r.get('age_days')]
 
-                cbo = [r.get('avg_cbo', 0) for r in processed_repos if r.get('avg_cbo')]
-                dit = [r.get('avg_dit', 0) for r in processed_repos if r.get('avg_dit')]
-                lcom = [r.get('avg_lcom', 0) for r in processed_repos if r.get('avg_lcom')]
+                cbo = [r.get('cbo', 0) for r in processed_repos if r.get('cbo')]
+                dit = [r.get('dit', 0) for r in processed_repos if r.get('dit')]
+                lcom = [r.get('lcom', 0) for r in processed_repos if r.get('lcom')]
 
                 
                 
                 print('Métricas de processo:  \n')
 
                 if stars:
-                    print(f"Média de estrelas por repositório: {sum(stars)/len(stars):.1f} ⭐")
-                if avg_loc:
-                    print(f"Linhas de código: {sum(avg_loc)/len(avg_loc):.2f}")
+                    print(f"Média de estrelas por repositório: {sum(stars)/len(processed_repos):.1f} ⭐")
+                if loc:
+                    print(f"Média de linhas de código: {sum(loc)/len(processed_repos):.2f}")
                 if releases:
-                    print(f"Atividade: {sum(releases)/len(releases):.2f}")
+                    print(f"Média de atividade: {sum(releases)/len(processed_repos):.2f}")
                 if age:
-                    print(f"Maturidade: {sum(age)/len(age):.2f}")
+                    print(f"Média de maturidade: {sum(age)/len(processed_repos):.2f}")
 
                 print('\n ---------------------------------------- \n')
 
@@ -623,12 +588,12 @@ def main():
                 print('Métricas de qualidade:  \n')
 
                 if cbo:
-                    print(f"CBO Médio: {sum(cbo)/len(cbo):.2f}")
+                    print(f"CBO Médio: {sum(cbo)/len(processed_repos):.2f}")
                 if dit:
-                    print(f"DIT Médio: {sum(dit)/len(dit):.2f}")
+                    print(f"DIT Médio: {sum(dit)/len(processed_repos):.2f}")
 
                 if lcom:
-                    print(f"LCOM Médio: {sum(lcom)/len(lcom):.2f}")
+                    print(f"LCOM Médio: {sum(lcom)/len(processed_repos):.2f}")
 
         else:
             print("Nenhum repositório foi processado com sucesso.")
