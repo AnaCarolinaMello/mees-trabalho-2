@@ -166,7 +166,8 @@ python main.py
 ### Fluxo de Execução:
 1. **Coleta repositórios** - Busca os repositórios Java mais populares no GitHub
 2. **Para cada repositório**:
-   - Clona o repositório
+   - Baixa o repositório como ZIP (muito mais rápido que git clone)
+   - Descompacta o ZIP
    - Executa análise CK
    - Extrai métricas dos arquivos CSV
    - Remove arquivos temporários
@@ -208,39 +209,42 @@ O script gera:
 
 ### Exemplo de Saída no Terminal:
 ```
-🗑️ CSV antigo removido: repositories_ck_analysis.csv
+CSV antigo removido: repositories_ck_analysis.csv
 Iniciando coleta de repositórios...
 
 COLETA FINALIZADA!
 Total de repositórios coletados: 5
 
 Repositórios que serão analisados:
-  1. spring-projects/spring-boot (70,234 ⭐)
-  2. elastic/elasticsearch (65,123 ⭐)
-  3. apache/kafka (25,456 ⭐)
+  1. spring-projects/spring-boot (70,234)
+  2. elastic/elasticsearch (65,123)
+  3. apache/kafka (25,456)
 
 INICIANDO ANÁLISE CK...
 ANALISANDO 1/5: spring-projects/spring-boot
 URL: https://github.com/spring-projects/spring-boot
 Stars: 70,234 | Linguagem: Java
 
-Clonando repositório: https://github.com/spring-projects/spring-boot.git
-Executando análise CK em: /tmp/spring-projects_spring-boot
+Baixando ZIP: https://github.com/spring-projects/spring-boot/archive/refs/heads/main.zip
+ZIP baixado com sucesso (45.2 MB)
+Descompactando ZIP...
+Repositório baixado e extraído em: /temp/spring-projects_spring-boot
+Executando análise CK em: /temp/spring-projects_spring-boot
 Análise CK concluída com sucesso
 Extraindo métricas dos arquivos CSV...
 Processando temp/class.csv
 Processando temp/method.csv
 Processando temp/field.csv
 Processando temp/variable.csv
-🗑️ Removido: class.csv
-🗑️ Removido: method.csv
-🗑️ Removido: field.csv
-🗑️ Removido: variable.csv
-✓ Métricas extraídas: 2,456 classes, 18,932 métodos
+Removido: class.csv
+Removido: method.csv
+Removido: field.csv
+Removido: variable.csv
+Métricas extraídas: 2,456 classes, 18,932 métodos
 Análise CK concluída. Removendo repositório clonado...
-✓ Repositório removido: spring-projects_spring-boot
+Repositório removido: spring-projects_spring-boot
 Dados de spring-projects/spring-boot adicionados ao CSV
-✅ Repositório processado com sucesso
+Repositório processado com sucesso
 ```
 
 ## Configuração Avançada
@@ -277,10 +281,11 @@ O projeto busca repositórios com:
 - Use um token com permissões adequadas
 - Aguarde reset do rate limit (1 hora)
 
-### Erro: "git clone failed"
+### Erro: "Erro ao baixar ZIP"
 - Verifique conexão com internet
 - Repositório pode estar privado ou removido
-- Verifique se Git está instalado
+- Verifique se o token GitHub tem permissões adequadas
+- Alguns repositórios podem usar branch 'master' ao invés de 'main' (o sistema tenta ambos automaticamente)
 
 ## Estrutura do CSV Final
 
