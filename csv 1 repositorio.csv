@@ -1,0 +1,2 @@
+name,owner,url,description,stars,age_days,primary_language,total_releases,created_at,total_classes,total_methods,total_fields,total_variables,avg_wmc,cbo,lcom,dit,avg_noc,avg_rfc,loc,avg_cc
+hello-algo,krahets,https://github.com/krahets/hello-algo,"《Hello 算法》：动画图解、一键运行的数据结构与算法教程。支持 Python, Java, C++, C, C#, JS, Go, Swift, Rust, Ruby, Kotlin, TS, Dart 代码。简体版和繁体版同步更新，English version in translation",116374,1040,Java,9,2022-11-04T11:08:34Z,215,0,0,0,0,403.0,1012.0,215.0,0,0,7700.0,0
