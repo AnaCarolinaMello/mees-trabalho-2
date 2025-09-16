@@ -399,6 +399,75 @@ class ReportGenerator:
 
         print("Visualizações geradas com sucesso!")
 
+    def generate_correlation_plots(self):
+        """Gera gráficos de correlação específicos para cada RQ"""
+        try:
+            plt.style.use('seaborn-v0_8')
+        except:
+            plt.style.use('default')
+
+        plt.rcParams['font.family'] = ['DejaVu Sans']
+
+        # Métricas de processo para cada RQ
+        rq_metrics = {
+            'RQ01': ('stars', 'Popularidade (Stars)'),
+            'RQ02': ('age_years', 'Maturidade (Anos)'),
+            'RQ03': ('total_releases', 'Atividade (Releases)'),
+            'RQ04': ('loc', 'Tamanho (LOC)')
+        }
+
+        quality_metrics = {
+            'cbo': 'CBO (Coupling Between Objects)',
+            'dit': 'DIT (Depth of Inheritance Tree)',
+            'lcom': 'LCOM (Lack of Cohesion of Methods)'
+        }
+
+        for rq_id, (process_col, process_name) in rq_metrics.items():
+            # Cria subplot para as 3 métricas de qualidade
+            fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+            fig.suptitle(f'{rq_id}: {process_name} vs Métricas de Qualidade', fontsize=16, fontweight='bold')
+
+            for idx, (quality_col, quality_name) in enumerate(quality_metrics.items()):
+                # Filtra dados válidos
+                valid_data = self.df[[process_col, quality_col]].dropna()
+
+                if len(valid_data) > 10:
+                    x = valid_data[process_col]
+                    y = valid_data[quality_col]
+
+                    # Calcula correlação
+                    from scipy.stats import pearsonr
+                    r, p = pearsonr(x, y)
+
+                    # Cria scatterplot
+                    axes[idx].scatter(x, y, alpha=0.6, s=30)
+
+                    # Adiciona linha de tendência
+                    z = np.polyfit(x, y, 1)
+                    p_trend = np.poly1d(z)
+                    axes[idx].plot(x, p_trend(x), "r--", alpha=0.8, linewidth=2)
+
+                    # Formatação
+                    axes[idx].set_xlabel(process_name)
+                    axes[idx].set_ylabel(quality_name)
+                    axes[idx].set_title(f'{quality_name}\nr = {r:.3f}, p = {p:.3f}')
+                    axes[idx].grid(True, alpha=0.3)
+
+                    # Limita outliers extremos para melhor visualização
+                    if quality_col in ['cbo', 'lcom', 'loc']:
+                        y_limit = y.quantile(0.95)
+                        axes[idx].set_ylim(0, y_limit)
+                else:
+                    axes[idx].text(0.5, 0.5, 'Dados insuficientes',
+                                 ha='center', va='center', transform=axes[idx].transAxes)
+                    axes[idx].set_title(quality_name)
+
+            plt.tight_layout()
+            plt.savefig(f'correlacao_{rq_id.lower()}.png', dpi=300, bbox_inches='tight')
+            plt.close()
+
+        print("Gráficos de correlação gerados com sucesso!")
+
     def add_visualizations_to_report(self, report):
         """Adiciona as visualizações gerais ao relatório"""
         # Seção de visualizações gerais (apenas gráficos não associados às RQs)
@@ -551,6 +620,9 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
 
         report += f"""
 
+**Gráficos de Correlação - RQ01:**
+![Correlações RQ01](data:image/png;base64,""" + self.get_embedded_image('correlacao_rq01.png') + """)
+
 **Gráfico de Apoio - RQ01:**
 ![Top 20 Repositórios por Popularidade](data:image/png;base64,""" + self.get_embedded_image('grafico_barras.png') + """)
 
@@ -571,6 +643,9 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
         report += self.format_correlation_table(rq_results['RQ02']['correlations'])
 
         report += f"""
+
+**Gráficos de Correlação - RQ02:**
+![Correlações RQ02](data:image/png;base64,""" + self.get_embedded_image('correlacao_rq02.png') + """)
 
 **Gráfico de Apoio - RQ02:**
 ![Distribuição da Idade dos Repositórios](data:image/png;base64,""" + self.get_embedded_image('grafico_histograma.png') + """)
@@ -593,6 +668,9 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
 
         report += f"""
 
+**Gráficos de Correlação - RQ03:**
+![Correlações RQ03](data:image/png;base64,""" + self.get_embedded_image('correlacao_rq03.png') + """)
+
 **Gráfico de Apoio - RQ03:**
 ![Relação entre Releases e Popularidade](data:image/png;base64,""" + self.get_embedded_image('grafico_dispersao.png') + """)
 
@@ -613,6 +691,9 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
         report += self.format_correlation_table(rq_results['RQ04']['correlations'])
 
         report += f"""
+
+**Gráficos de Correlação - RQ04:**
+![Correlações RQ04](data:image/png;base64,""" + self.get_embedded_image('correlacao_rq04.png') + """)
 
 **Gráfico de Apoio - RQ04:**
 ![Distribuição por Tamanho do Código](data:image/png;base64,""" + self.get_embedded_image('grafico_pizza.png') + """)
@@ -735,6 +816,9 @@ Este estudo analisou **{len(self.df)} repositórios** Java populares do GitHub, 
         print("Gerando visualizações...")
         self.generate_visualizations()
 
+        print("Gerando gráficos de correlação...")
+        self.generate_correlation_plots()
+
         print("Gerando relatório em Markdown...")
         report_content = self.generate_markdown_report()
 
@@ -756,6 +840,10 @@ Este estudo analisou **{len(self.df)} repositórios** Java populares do GitHub, 
             print("grafico_boxplot.png - Métricas principais")
             print("grafico_dispersao.png - Stars vs Releases")
             print("grafico_heatmap.png - Correlação entre métricas")
+            print("correlacao_rq01.png - Gráficos de correlação RQ01")
+            print("correlacao_rq02.png - Gráficos de correlação RQ02")
+            print("correlacao_rq03.png - Gráficos de correlação RQ03")
+            print("correlacao_rq04.png - Gráficos de correlação RQ04")
             print("="*60)
 
         return success
