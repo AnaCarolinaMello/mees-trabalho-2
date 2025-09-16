@@ -13,6 +13,8 @@ import seaborn as sns
 from pathlib import Path
 import base64
 import io
+from scipy import stats
+from scipy.stats import spearmanr, pearsonr
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -100,58 +102,165 @@ class ReportGenerator:
         return lang_counts
 
     def analyze_research_questions(self):
-        """Analisa as questões de pesquisa"""
+        """Analisa as questões de pesquisa conforme o enunciado"""
         results = {}
 
-        # RQ01: Sistemas populares são maduros/antigos?
-        median_age = self.df['age_years'].median()
+        # Métricas de processo
+        process_metrics = ['stars', 'age_years', 'total_releases', 'loc']
+        quality_metrics = ['cbo', 'dit', 'lcom']
+
+        # Filtra dados válidos
+        valid_data = self.df.dropna(subset=process_metrics + quality_metrics)
+
+        # RQ01: Relação entre popularidade e características de qualidade
         results['RQ01'] = {
-            'question': 'Sistemas populares são maduros/antigos?',
-            'median_age': median_age,
-            'mature_repos': len(self.df[self.df['age_years'] > 5]),
-            'percentage_mature': (len(self.df[self.df['age_years'] > 5]) / len(self.df)) * 100
+            'question': 'Qual a relação entre a popularidade dos repositórios e as suas características de qualidade?',
+            'metric': 'Popularidade (Stars)',
+            'correlations': self.calculate_correlations(valid_data, 'stars', quality_metrics),
+            'summary_stats': self.get_summary_stats(valid_data, 'stars')
         }
 
-        # RQ02: Sistemas populares recebem muita contribuição externa?
-        median_prs = self.df['accepted_pull_requests'].median()
+        # RQ02: Relação entre maturidade e características de qualidade
         results['RQ02'] = {
-            'question': 'Sistemas populares recebem muita contribuição externa?',
-            'median_prs': median_prs,
-            'high_contrib_repos': len(self.df[self.df['accepted_pull_requests'] > median_prs])
+            'question': 'Qual a relação entre a maturidade dos repositórios e as suas características de qualidade?',
+            'metric': 'Maturidade (Anos)',
+            'correlations': self.calculate_correlations(valid_data, 'age_years', quality_metrics),
+            'summary_stats': self.get_summary_stats(valid_data, 'age_years')
         }
 
-        # RQ03: Sistemas populares lançam releases com frequência?
-        median_releases = self.df['total_releases'].median()
+        # RQ03: Relação entre atividade e características de qualidade
         results['RQ03'] = {
-            'question': 'Sistemas populares lançam releases com frequência?',
-            'median_releases': median_releases,
-            'active_release_repos': len(self.df[self.df['total_releases'] > 10])
+            'question': 'Qual a relação entre a atividade dos repositórios e as suas características de qualidade?',
+            'metric': 'Atividade (Releases)',
+            'correlations': self.calculate_correlations(valid_data, 'total_releases', quality_metrics),
+            'summary_stats': self.get_summary_stats(valid_data, 'total_releases')
         }
 
-        # RQ04: Sistemas populares são atualizados com frequência?
-        recent_updates = len(self.df[self.df['last_update_days'] < 90])
+        # RQ04: Relação entre tamanho e características de qualidade
         results['RQ04'] = {
-            'question': 'Sistemas populares são atualizados com frequência?',
-            'recent_updates': recent_updates,
-            'percentage_recent': (recent_updates / len(self.df)) * 100
-        }
-
-        # RQ05: Sistemas populares são escritos nas linguagens mais populares?
-        top_languages = self.df['primary_language'].value_counts().head(3)
-        results['RQ05'] = {
-            'question': 'Sistemas populares são escritos nas linguagens mais populares?',
-            'top_languages': top_languages
-        }
-
-        # RQ06: Sistemas populares possuem alto percentual de issues fechadas?
-        high_closure = len(self.df[self.df['closed_issues_ratio'] > 0.7])
-        results['RQ06'] = {
-            'question': 'Sistemas populares possuem alto percentual de issues fechadas?',
-            'high_closure_repos': high_closure,
-            'percentage_high_closure': (high_closure / len(self.df)) * 100
+            'question': 'Qual a relação entre o tamanho dos repositórios e as suas características de qualidade?',
+            'metric': 'Tamanho (LOC)',
+            'correlations': self.calculate_correlations(valid_data, 'loc', quality_metrics),
+            'summary_stats': self.get_summary_stats(valid_data, 'loc')
         }
 
         return results
+
+    def calculate_correlations(self, data, process_metric, quality_metrics):
+        """Calcula correlações entre métrica de processo e métricas de qualidade"""
+        correlations = {}
+
+        for quality_metric in quality_metrics:
+            if quality_metric in data.columns and data[quality_metric].notna().sum() > 10:
+                # Correlação de Pearson
+                pearson_corr, pearson_p = pearsonr(data[process_metric], data[quality_metric])
+
+                # Correlação de Spearman
+                spearman_corr, spearman_p = spearmanr(data[process_metric], data[quality_metric])
+
+                correlations[quality_metric] = {
+                    'pearson': {'correlation': pearson_corr, 'p_value': pearson_p},
+                    'spearman': {'correlation': spearman_corr, 'p_value': spearman_p}
+                }
+            else:
+                correlations[quality_metric] = {
+                    'pearson': {'correlation': 0, 'p_value': 1},
+                    'spearman': {'correlation': 0, 'p_value': 1}
+                }
+
+        return correlations
+
+    def get_summary_stats(self, data, metric):
+        """Calcula estatísticas resumo para uma métrica"""
+        values = data[metric].dropna()
+        return {
+            'mean': values.mean(),
+            'median': values.median(),
+            'std': values.std(),
+            'min': values.min(),
+            'max': values.max(),
+            'count': len(values)
+        }
+
+    def format_correlation_table(self, correlations):
+        """Formata tabela de correlações"""
+        table = """
+
+| Métrica de Qualidade | Pearson (r) | p-value | Spearman (ρ) | p-value | Interpretação |
+|---------------------|-------------|---------|--------------|---------|---------------|
+"""
+
+        for metric, corr_data in correlations.items():
+            pearson_r = corr_data['pearson']['correlation']
+            pearson_p = corr_data['pearson']['p_value']
+            spearman_r = corr_data['spearman']['correlation']
+            spearman_p = corr_data['spearman']['p_value']
+
+            # Interpretação da correlação
+            if abs(pearson_r) < 0.1:
+                interpretation = "Correlação desprezível"
+            elif abs(pearson_r) < 0.3:
+                interpretation = "Correlação fraca"
+            elif abs(pearson_r) < 0.5:
+                interpretation = "Correlação moderada"
+            elif abs(pearson_r) < 0.7:
+                interpretation = "Correlação forte"
+            else:
+                interpretation = "Correlação muito forte"
+
+            # Adiciona significância
+            if pearson_p < 0.05:
+                interpretation += " (significativa)"
+            else:
+                interpretation += " (não significativa)"
+
+            table += f"| {metric.upper()} | {pearson_r:.3f} | {pearson_p:.3f} | {spearman_r:.3f} | {spearman_p:.3f} | {interpretation} |\n"
+
+        return table
+
+    def analyze_hypothesis(self, rq_result, hypothesis_id):
+        """Analisa uma hipótese baseada nos resultados da RQ"""
+        correlations = rq_result['correlations']
+
+        # Conta correlações significativas
+        significant_corrs = []
+        for metric, corr_data in correlations.items():
+            if corr_data['pearson']['p_value'] < 0.05:
+                significant_corrs.append(f"{metric.upper()}")
+
+        if significant_corrs:
+            if hypothesis_id == 'H1':
+                return f"PARCIALMENTE CONFIRMADA - Encontradas correlações significativas com {', '.join(significant_corrs)}"
+            elif hypothesis_id == 'H2':
+                return f"PARCIALMENTE CONFIRMADA - Encontradas correlações significativas com {', '.join(significant_corrs)}"
+            elif hypothesis_id == 'H3':
+                return f"PARCIALMENTE CONFIRMADA - Encontradas correlações significativas com {', '.join(significant_corrs)}"
+            elif hypothesis_id == 'H4':
+                return f"CONFIRMADA - Encontradas correlações significativas com {', '.join(significant_corrs)}"
+        else:
+            return "NÃO CONFIRMADA - Nenhuma correlação significativa encontrada"
+
+    def get_main_finding(self, rq_result):
+        """Extrai o principal achado de uma questão de pesquisa"""
+        correlations = rq_result['correlations']
+
+        # Encontra a correlação mais forte e significativa
+        strongest_corr = None
+        strongest_value = 0
+
+        for metric, corr_data in correlations.items():
+            pearson_r = abs(corr_data['pearson']['correlation'])
+            pearson_p = corr_data['pearson']['p_value']
+
+            if pearson_p < 0.05 and pearson_r > strongest_value:
+                strongest_value = pearson_r
+                strongest_corr = metric
+
+        if strongest_corr:
+            direction = "positiva" if correlations[strongest_corr]['pearson']['correlation'] > 0 else "negativa"
+            return f"Correlação {direction} significativa mais forte com {strongest_corr.upper()} (r={correlations[strongest_corr]['pearson']['correlation']:.3f})"
+        else:
+            return "Nenhuma correlação significativa identificada"
 
     def image_to_base64(self, image_path):
         """Converte imagem para base64 para embedding"""
@@ -192,30 +301,32 @@ class ReportGenerator:
         plt.savefig('grafico_histograma.png', dpi=300, bbox_inches='tight')
         plt.close()
 
-        # 2. Gráfico de barras - Linguagens
+        # 2. Gráfico de barras - Distribuição de Stars (Top 20)
         plt.figure(figsize=(12, 6))
-        lang_counts = self.df['primary_language'].value_counts().head(10)
-        lang_counts.plot(kind='bar', color='lightcoral')
-        plt.title('Top 10 Linguagens de Programação', fontsize=14, fontweight='bold')
-        plt.xlabel('Linguagem')
-        plt.ylabel('Número de Repositórios')
-        plt.xticks(rotation=45)
+        top_repos = self.df.nlargest(20, 'stars')
+        plt.bar(range(len(top_repos)), top_repos['stars'], color='lightcoral')
+        plt.title('Top 20 Repositórios por Popularidade (Stars)', fontsize=14, fontweight='bold')
+        plt.xlabel('Repositórios')
+        plt.ylabel('Número de Stars')
+        plt.xticks(range(len(top_repos)), [name[:15] + '...' if len(name) > 15 else name for name in top_repos['name']], rotation=45, ha='right')
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.savefig('grafico_barras.png', dpi=300, bbox_inches='tight')
         plt.close()
 
-        # 3. Gráfico de pizza - Distribuição de linguagens
+        # 3. Gráfico de pizza - Distribuição por faixas de LOC
         plt.figure(figsize=(10, 8))
-        top_5_langs = self.df['primary_language'].value_counts().head(5)
-        others = self.df['primary_language'].value_counts().iloc[5:].sum()
-        if others > 0:
-            top_5_langs['Outros'] = others
+        # Cria faixas de tamanho por LOC
+        loc_bins = [0, 1000, 10000, 50000, 100000, float('inf')]
+        loc_labels = ['< 1K LOC', '1K-10K LOC', '10K-50K LOC', '50K-100K LOC', '> 100K LOC']
 
-        colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#ff99cc', '#c2c2f0']
-        plt.pie(top_5_langs.values, labels=top_5_langs.index, autopct='%1.1f%%',
-                colors=colors[:len(top_5_langs)], startangle=90)
-        plt.title('Distribuição de Linguagens de Programação', fontsize=14, fontweight='bold')
+        self.df['loc_category'] = pd.cut(self.df['loc'], bins=loc_bins, labels=loc_labels, right=False)
+        loc_counts = self.df['loc_category'].value_counts()
+
+        colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#ff99cc']
+        plt.pie(loc_counts.values, labels=loc_counts.index, autopct='%1.1f%%',
+                colors=colors[:len(loc_counts)], startangle=90)
+        plt.title('Distribuição de Repositórios por Tamanho (LOC)', fontsize=14, fontweight='bold')
         plt.axis('equal')
         plt.tight_layout()
         plt.savefig('grafico_pizza.png', dpi=300, bbox_inches='tight')
@@ -276,13 +387,13 @@ class ReportGenerator:
         else:
             # Cria correlação fictícia se não houver dados suficientes
             corr_data = pd.DataFrame([[1.0, 0.5], [0.5, 1.0]],
-                                   columns=['stars', 'releases'],
-                                   index=['stars', 'releases'])
+                                  columns=['stars', 'releases'],
+                                  index=['stars', 'releases'])
 
         plt.figure(figsize=(10, 8))
         if len(corr_data.columns) > 1:
-            sns.heatmap(corr_data, annot=True, cmap='coolwarm', center=0,
-                       square=True, fmt='.2f', cbar_kws={'shrink': 0.8})
+          sns.heatmap(corr_data, annot=True, cmap='coolwarm', center=0,
+                  square=True, fmt='.2f', cbar_kws={'shrink': 0.8})
         else:
             plt.text(0.5, 0.5, 'Dados insuficientes\npara correlação',
                     ha='center', va='center', transform=plt.gca().transAxes, fontsize=14)
@@ -300,6 +411,12 @@ class ReportGenerator:
 #### Distribuição da Idade dos Repositórios
 ![Histograma - Distribuição de Idade](data:image/png;base64,""" + self.get_embedded_image('grafico_histograma.png') + """)
 
+#### Top 20 Repositórios por Popularidade
+![Gráfico de Barras - Top Repositórios](data:image/png;base64,""" + self.get_embedded_image('grafico_barras.png') + """)
+
+#### Distribuição por Tamanho do Código
+![Gráfico de Pizza - Distribuição por LOC](data:image/png;base64,""" + self.get_embedded_image('grafico_pizza.png') + """)
+
 #### Distribuição das Principais Métricas
 ![Boxplot - Métricas Principais](data:image/png;base64,""" + self.get_embedded_image('grafico_boxplot.png') + """)
 
@@ -312,17 +429,16 @@ class ReportGenerator:
 """
 
         # Insere as imagens antes da seção "Discussão"
-        return report.replace("---\n\n## 7. Discussão", images_section + "\n---\n\n## 7. Discussão")
+        return report.replace("---\n\n## 5. Discussão", images_section + "\n---\n\n## 5. Discussão")
 
     def generate_markdown_report(self):
         """Gera o relatório completo em Markdown"""
         stats = self.calculate_statistics()
-        lang_analysis = self.analyze_languages()
         rq_results = self.analyze_research_questions()
 
-        report = f"""# 📝 Relatório Técnico de Laboratório - Análise de Repositórios GitHub
+        report = f"""# Um Estudo das Características de Qualidade de Sistemas Java
 
-## 1. Informações do grupo
+## 1. Informações do Grupo
 - **Curso:** Engenharia de Software
 - **Disciplina:** Laboratório de Experimentação de Software
 - **Período:** 6° Período
@@ -333,17 +449,20 @@ class ReportGenerator:
 
 ## 2. Introdução
 
-Este laboratório tem como objetivo analisar repositórios populares do GitHub para compreender padrões de desenvolvimento, maturidade e qualidade de software em projetos open-source. Foram analisados **{len(self.df)} repositórios** Java populares (com mais de 1000 estrelas) utilizando métricas de processo e qualidade de código.
+No processo de desenvolvimento de sistemas open-source, em que diversos desenvolvedores contribuem em partes diferentes do código, um dos riscos a serem gerenciados diz respeito à evolução dos seus atributos de qualidade interna. Isto é, ao se adotar uma abordagem colaborativa, corre-se o risco de tornar vulnerável aspectos como modularidade, manutenibilidade, ou legibilidade do software produzido.
 
-**Hipóteses Informais - Informal Hypotheses (IH):**
+Neste contexto, o objetivo deste laboratório é analisar aspectos da qualidade de repositórios desenvolvidos na linguagem Java, correlacionando-os com características do seu processo de desenvolvimento, sob a perspectiva de métricas de produto calculadas através da ferramenta CK.
 
-- **IH01:** Sistemas populares recebem mais contribuições externas e lançam releases com maior frequência, refletindo um processo de desenvolvimento ativo.
-- **IH02:** Mais de 50% dos repositórios populares são mantidos há mais de 5 anos, indicando maturidade do projeto.
-- **IH03:** Espera-se que mais de 50% dos repositórios populares tenham pelo menos 70% das issues fechadas, demonstrando boa gestão de problemas.
-- **IH04:** Repositórios populares tendem a ser escritos nas linguagens mais utilizadas (ex.: JavaScript, Python, Java), representando a adoção de linguagens consolidadas.
-- **IH05:** Mais de 50% dos repositórios populares recebem atualizações nos últimos 3 meses, refletindo atividade contínua da comunidade.
-- **IH06:** Projetos populares com maior número de forks tendem a ter mais pull requests aceitas, indicando engajamento externo significativo.
-- **IH07:** Repositórios populares com grande número de stars podem apresentar Big Numbers em métricas como número de commits, branches e releases, destacando sua relevância na comunidade open-source.
+Foram analisados **{len(self.df)} repositórios** Java populares do GitHub, aplicando métricas de processo e qualidade de código.
+
+### Hipóteses Informais
+
+- **H1:** Repositórios mais populares (maior número de estrelas) tendem a apresentar melhores características de qualidade interna, com menores valores de acoplamento (CBO) e maior coesão.
+- **H2:** Repositórios mais maduros (mais antigos) apresentam melhor qualidade de código, devido ao processo de refinamento ao longo do tempo.
+- **H3:** Repositórios mais ativos (maior número de releases) mantêm características de qualidade estáveis, indicando práticas de desenvolvimento controladas.
+- **H4:** Repositórios maiores (mais linhas de código) tendem a apresentar maior complexidade e acoplamento, resultando em valores mais altos de métricas como CBO e DIT.
+- **H5:** Existe uma correlação positiva entre o tamanho do repositório e a profundidade da árvore de herança (DIT).
+- **H6:** Repositórios com maior atividade de desenvolvimento apresentam melhor coesão de métodos (menores valores de LCOM).
 
 ---
 
@@ -355,188 +474,214 @@ Este laboratório tem como objetivo analisar repositórios populares do GitHub p
 
 ---
 
-## 4. Metodologia
+## 3. Metodologia
 
-### 4.1 Coleta de dados
-- Foram coletados dados de **{len(self.df)} repositórios** utilizando a GitHub GraphQL API.
-- Critérios de seleção: repositórios Java com mais de 1000 estrelas, ordenados por popularidade.
+### 3.1 Seleção de Repositórios
+Com o objetivo de analisar repositórios relevantes, escritos na linguagem Java, foram coletados **{len(self.df)} repositórios** Java populares do GitHub, calculando cada uma das métricas definidas na Seção 3.3.
 
-### 4.2 Filtragem e paginação
-- Foi utilizada paginação da API devido ao grande volume de dados.
-- Tempo médio de coleta: aproximadamente 30-45 minutos para {len(self.df)} repositórios.
+### 3.2 Questões de Pesquisa
+Este laboratório tem o objetivo de responder às seguintes questões de pesquisa:
 
-### 4.3 Normalização e pré-processamento
-- Os dados foram normalizados e métricas derivadas foram calculadas (idade em anos, percentual de issues fechadas).
-- Tratamento de valores ausentes e inconsistências nos dados.
+- **RQ01:** Qual a relação entre a popularidade dos repositórios e as suas características de qualidade?
+- **RQ02:** Qual a relação entre a maturidade dos repositórios e as suas características de qualidade?
+- **RQ03:** Qual a relação entre a atividade dos repositórios e as suas características de qualidade?
+- **RQ04:** Qual a relação entre o tamanho dos repositórios e as suas características de qualidade?
 
-### 4.4 Cálculo de métricas
-- Métricas de processo: idade, pull requests aceitas, releases, popularidade (stars).
-- Métricas de qualidade: CK metrics (CBO, DIT, LCOM, LOC).
-- Métricas compostas baseadas em combinação de fatores relevantes.
+### 3.3 Definição de Métricas
+Para cada questão de pesquisa, realizamos a comparação entre as características do processo de desenvolvimento dos repositórios e os valores obtidos para as métricas.
 
-### 4.5 Análise estatística
-- Repositórios analisados utilizando estatísticas descritivas.
-- Análise de correlações entre métricas de processo e qualidade.
+**Métricas de Processo:**
+- **Popularidade:** número de estrelas
+- **Tamanho:** linhas de código (LOC)
+- **Atividade:** número de releases
+- **Maturidade:** idade (em anos) de cada repositório coletado
 
----
+**Métricas de Qualidade:**
+- **CBO:** Coupling between objects
+- **DIT:** Depth Inheritance Tree
+- **LCOM:** Lack of Cohesion of Methods
 
-## 5. Questões de pesquisa
+### 3.4 Coleta e Análise de Dados
+Para análise das métricas de popularidade, atividade e maturidade, foram coletadas informações dos repositórios utilizando as APIs GraphQL do GitHub. Para medição dos valores de qualidade, utilizamos a ferramenta CK de análise estática de código.
 
-| RQ   | Pergunta | Métrica utilizada | Código da Métrica |
-|------|----------|-----------------|-----------------|
-| RQ01 | Sistemas populares são maduros/antigos? | Idade do repositório (calculado a partir da data de criação) | LM01 |
-| RQ02 | Sistemas populares recebem muita contribuição externa? | Total de Pull Requests Aceitas | LM02 |
-| RQ03 | Sistemas populares lançam releases com frequência? | Total de Releases | LM03 |
-| RQ04 | Sistemas populares são atualizados com frequência? | Tempo desde a última atualização (dias) | LM04 |
-| RQ05 | Sistemas populares são escritos nas linguagens mais populares? | Linguagem primária de cada repositório | AM01 |
-| RQ06 | Sistemas populares possuem um alto percentual de issues fechadas? | Razão entre número de issues fechadas pelo total de issues | LM05 |
-
----
-
-## 6. Resultados
-
-### 6.1 Métricas
-
-#### Métricas de Laboratório - Lab Metrics (LM)
-| Código | Métrica | Descrição |
-|--------|--------|-----------|
-| LM01 | Idade do Repositório (anos) | Tempo desde a criação do repositório até o momento atual, medido em anos. |
-| LM02 | Pull Requests Aceitas | Quantidade de pull requests que foram aceitas e incorporadas ao repositório. |
-| LM03 | Número de Releases | Total de versões ou releases oficiais publicadas no repositório. |
-| LM04 | Tempo desde a Última Atualização (dias) | Número de dias desde a última modificação ou commit no repositório. |
-| LM05 | Percentual de Issues Fechadas (%) | Proporção de issues fechadas em relação ao total de issues criadas, em percentual. |
-| LM06 | Número de Estrelas | Quantidade de estrelas recebidas no GitHub, representando interesse ou popularidade. |
-| LM07 | Tamanho do Repositório (LOC) | Total de linhas de código (Lines of Code) contidas no repositório. |
-
-#### Métricas adicionais trazidas pelo grupo - Additional Metrics (AM)
-| Código | Métrica | Descrição |
-|------|--------|------------|
-| AM01 | Linguagem Primária | Linguagem de programação principal do repositório (Java) |
-| AM02 | CBO (Coupling Between Objects) | Métrica de acoplamento entre objetos |
-| AM03 | DIT (Depth of Inheritance Tree) | Profundidade da árvore de herança |
-| AM04 | LCOM (Lack of Cohesion of Methods) | Falta de coesão entre métodos |
+### 3.5 Análise Estatística
+- Sumarização dos dados através de valores de medida central (mediana, média e desvio padrão) por repositório
+- Testes de correlação de Pearson e Spearman para avaliar relações entre métricas
+- Análise de significância estatística (p-value < 0.05)
 
 ---
 
-### 6.2 Distribuição por categoria
+## 4. Resultados
 
-#### Linguagens de Programação:
-| Linguagem | Quantidade |
-|-----------|------------|
+### 4.1 Estatísticas Descritivas
+
+#### Métricas de Processo
+| Métrica | Média | Mediana | Desvio Padrão | Mínimo | Máximo |
+|---------|-------|---------|---------------|--------|--------|
 """
 
-        # Adiciona tabela de linguagens
-        for lang, count in lang_analysis.head(10).items():
-            report += f"| {lang} | {count} |\n"
-
-        report += f"""
-
-### 6.3 Estatísticas Descritivas
-
-| Métrica | Código | Média | Mediana | Moda | Desvio Padrão | Mínimo | Máximo |
-|---------|--------|------|--------|-----|---------------|--------|--------|
-"""
-
-        # Adiciona estatísticas
-        metric_codes = {
-            'Idade do Repositório (anos)': 'LM01',
-            'Pull Requests Aceitas': 'LM02',
-            'Número de Releases': 'LM03',
-            'Tempo desde a Última Atualização (dias)': 'LM04',
-            'Percentual de Issues Fechadas (%)': 'LM05',
-            'Número de Estrelas': 'LM06',
-            'Tamanho do Repositório (LOC)': 'LM07',
-            'CBO (Coupling Between Objects)': 'AM02',
-            'DIT (Depth of Inheritance Tree)': 'AM03',
-            'LCOM (Lack of Cohesion of Methods)': 'AM04',
-            'Total de Classes': 'AM05',
-            'Total de Métodos': 'AM06',
-            'WMC Médio (Weighted Methods per Class)': 'AM07',
-            'Complexidade Ciclomática Média': 'AM08'
+        # Adiciona estatísticas das métricas de processo
+        process_metrics = {
+            'Popularidade (Stars)': 'stars',
+            'Maturidade (Anos)': 'age_years',
+            'Atividade (Releases)': 'total_releases',
+            'Tamanho (LOC)': 'loc'
         }
 
-        for metric, data in stats.items():
-            code = metric_codes.get(metric, 'N/A')
-            report += f"| {metric} | {code} | {data['mean']:.2f} | {data['median']:.2f} | {data['mode']:.2f} | {data['std']:.2f} | {data['min']:.2f} | {data['max']:.2f} |\n"
+        for metric_name, column in process_metrics.items():
+            if column in self.df.columns:
+                data = self.df[column].dropna()
+                if len(data) > 0:
+                    report += f"| {metric_name} | {data.mean():.2f} | {data.median():.2f} | {data.std():.2f} | {data.min():.2f} | {data.max():.2f} |\n"
 
         report += f"""
 
-### 6.4 Análise das Questões de Pesquisa
-
-#### RQ01: {rq_results['RQ01']['question']}
-- **Idade mediana:** {rq_results['RQ01']['median_age']:.1f} anos
-- **Repositórios maduros (>5 anos):** {rq_results['RQ01']['mature_repos']} ({rq_results['RQ01']['percentage_mature']:.1f}%)
-
-#### RQ02: {rq_results['RQ02']['question']}
-- **Mediana de PRs aceitas:** {rq_results['RQ02']['median_prs']:.0f}
-- **Repositórios com alta contribuição:** {rq_results['RQ02']['high_contrib_repos']}
-
-#### RQ03: {rq_results['RQ03']['question']}
-- **Mediana de releases:** {rq_results['RQ03']['median_releases']:.0f}
-- **Repositórios ativos (>10 releases):** {rq_results['RQ03']['active_release_repos']}
-
-#### RQ04: {rq_results['RQ04']['question']}
-- **Repositórios atualizados recentemente (<90 dias):** {rq_results['RQ04']['recent_updates']} ({rq_results['RQ04']['percentage_recent']:.1f}%)
-
-#### RQ05: {rq_results['RQ05']['question']}
-- **Top 3 linguagens:**
+#### Métricas de Qualidade
+| Métrica | Média | Mediana | Desvio Padrão | Mínimo | Máximo |
+|---------|-------|---------|---------------|--------|--------|
 """
 
-        for lang, count in rq_results['RQ05']['top_languages'].head(3).items():
-            report += f"  - {lang}: {count} repositórios\n"
+        # Adiciona estatísticas das métricas de qualidade
+        quality_metrics = {
+            'CBO (Coupling Between Objects)': 'cbo',
+            'DIT (Depth of Inheritance Tree)': 'dit',
+            'LCOM (Lack of Cohesion of Methods)': 'lcom'
+        }
+
+        for metric_name, column in quality_metrics.items():
+            if column in self.df.columns:
+                data = self.df[column].dropna()
+                if len(data) > 0:
+                    report += f"| {metric_name} | {data.mean():.2f} | {data.median():.2f} | {data.std():.2f} | {data.min():.2f} | {data.max():.2f} |\n"
 
         report += f"""
 
-#### RQ06: {rq_results['RQ06']['question']}
-- **Repositórios com alto percentual de fechamento (>70%):** {rq_results['RQ06']['high_closure_repos']} ({rq_results['RQ06']['percentage_high_closure']:.1f}%)
+### 4.2 Análise das Questões de Pesquisa
 
-### 6.5 Visualizações dos Dados
+#### RQ01: {rq_results['RQ01']['question']}
+**Métrica de Processo:** {rq_results['RQ01']['metric']}
+
+**Estatísticas Descritivas:**
+- Média: {rq_results['RQ01']['summary_stats']['mean']:.2f}
+- Mediana: {rq_results['RQ01']['summary_stats']['median']:.2f}
+- Desvio Padrão: {rq_results['RQ01']['summary_stats']['std']:.2f}
+
+**Correlações com Métricas de Qualidade:**"""
+
+        # Adiciona tabela de correlação para RQ01
+        report += self.format_correlation_table(rq_results['RQ01']['correlations'])
+
+        report += f"""
+
+#### RQ02: {rq_results['RQ02']['question']}
+**Métrica de Processo:** {rq_results['RQ02']['metric']}
+
+**Estatísticas Descritivas:**
+- Média: {rq_results['RQ02']['summary_stats']['mean']:.2f}
+- Mediana: {rq_results['RQ02']['summary_stats']['median']:.2f}
+- Desvio Padrão: {rq_results['RQ02']['summary_stats']['std']:.2f}
+
+**Correlações com Métricas de Qualidade:**"""
+
+        # Adiciona tabela de correlação para RQ02
+        report += self.format_correlation_table(rq_results['RQ02']['correlations'])
+
+        report += f"""
+
+#### RQ03: {rq_results['RQ03']['question']}
+**Métrica de Processo:** {rq_results['RQ03']['metric']}
+
+**Estatísticas Descritivas:**
+- Média: {rq_results['RQ03']['summary_stats']['mean']:.2f}
+- Mediana: {rq_results['RQ03']['summary_stats']['median']:.2f}
+- Desvio Padrão: {rq_results['RQ03']['summary_stats']['std']:.2f}
+
+**Correlações com Métricas de Qualidade:**"""
+
+        # Adiciona tabela de correlação para RQ03
+        report += self.format_correlation_table(rq_results['RQ03']['correlations'])
+
+        report += f"""
+
+#### RQ04: {rq_results['RQ04']['question']}
+**Métrica de Processo:** {rq_results['RQ04']['metric']}
+
+**Estatísticas Descritivas:**
+- Média: {rq_results['RQ04']['summary_stats']['mean']:.2f}
+- Mediana: {rq_results['RQ04']['summary_stats']['median']:.2f}
+- Desvio Padrão: {rq_results['RQ04']['summary_stats']['std']:.2f}
+
+**Correlações com Métricas de Qualidade:**"""
+
+        # Adiciona tabela de correlação para RQ04
+        report += self.format_correlation_table(rq_results['RQ04']['correlations'])
+
+        report += f"""
+
+### 4.3 Visualizações dos Dados
 
 Os seguintes gráficos foram gerados para facilitar a análise:
 
 ---
 
-## 7. Discussão
+## 5. Discussão
 
-### Análise das Hipóteses:
+### 5.1 Análise das Hipóteses
 
-**IH01 - CONFIRMADA:** Sistemas populares realmente mostram atividade de desenvolvimento, com mediana de {rq_results['RQ02']['median_prs']:.0f} PRs aceitas e {rq_results['RQ03']['median_releases']:.0f} releases.
+**H1 - Popularidade vs Qualidade:** {self.analyze_hypothesis(rq_results['RQ01'], 'H1')}
 
-**IH02 - CONFIRMADA:** {rq_results['RQ01']['percentage_mature']:.1f}% dos repositórios têm mais de 5 anos, confirmando maturidade.
+**H2 - Maturidade vs Qualidade:** {self.analyze_hypothesis(rq_results['RQ02'], 'H2')}
 
-**IH03 - CONFIRMADA:** {rq_results['RQ06']['percentage_high_closure']:.1f}% dos repositórios têm alto percentual de fechamento de issues.
+**H3 - Atividade vs Qualidade:** {self.analyze_hypothesis(rq_results['RQ03'], 'H3')}
 
-**IH04 - CONFIRMADA:** Java é predominante, refletindo o critério de busca focado nesta linguagem.
+**H4 - Tamanho vs Qualidade:** {self.analyze_hypothesis(rq_results['RQ04'], 'H4')}
 
-**IH05 - PARCIALMENTE CONFIRMADA:** {rq_results['RQ04']['percentage_recent']:.1f}% dos repositórios foram atualizados recentemente.
+### 5.2 Padrões Observados
 
-### Padrões Observados:
-- Forte correlação entre popularidade (stars) e atividade de desenvolvimento
-- Repositórios mais antigos tendem a ter mais releases
-- Métricas de qualidade (CBO, DIT, LCOM) variam significativamente entre projetos
+- **Correlações significativas encontradas:** Análise das correlações com p-value < 0.05
+- **Métricas de qualidade:** Variação dos valores de CBO, DIT e LCOM entre repositórios
+- **Características de processo:** Distribuição das métricas de popularidade, maturidade, atividade e tamanho
+
+### 5.3 Limitações do Estudo
+
+- Análise limitada a repositórios Java populares
+- Métricas CK podem não capturar todos os aspectos de qualidade
+- Correlação não implica causação
 
 ---
 
-## 8. Conclusão
+## 6. Conclusão
 
-### Principais insights:
-- **Big numbers encontrados:** Repositórios com até {stats['Número de Estrelas']['max']:,.0f} stars e {stats['Tamanho do Repositório (LOC)']['max']:,.0f} linhas de código
-- **Maturidade confirmada:** {rq_results['RQ01']['percentage_mature']:.1f}% dos repositórios são maduros (>5 anos)
-- **Atividade comprovada:** Mediana de {rq_results['RQ03']['median_releases']:.0f} releases por repositório
-- **Gestão eficiente:** {rq_results['RQ06']['percentage_high_closure']:.1f}% têm boa gestão de issues
+### 6.1 Principais Achados
 
-### Problemas e dificuldades enfrentadas:
-- Limitações da API do GitHub com rate limiting
-- Complexidade na análise CK de repositórios muito grandes
-- Tratamento de dados inconsistentes e valores ausentes
-- Tempo de processamento elevado para análise de {len(self.df)} repositórios
+Este estudo analisou **{len(self.df)} repositórios** Java populares do GitHub, investigando as relações entre características de processo de desenvolvimento e métricas de qualidade de código calculadas pela ferramenta CK.
 
-### Sugestões para trabalhos futuros:
-- Analisar correlação entre métricas de qualidade e popularidade
-- Implementar análise temporal de evolução dos repositórios
+**Resultados por Questão de Pesquisa:**
+
+- **RQ01 (Popularidade vs Qualidade):** {self.get_main_finding(rq_results['RQ01'])}
+- **RQ02 (Maturidade vs Qualidade):** {self.get_main_finding(rq_results['RQ02'])}
+- **RQ03 (Atividade vs Qualidade):** {self.get_main_finding(rq_results['RQ03'])}
+- **RQ04 (Tamanho vs Qualidade):** {self.get_main_finding(rq_results['RQ04'])}
+
+### 6.2 Implicações Práticas
+
+- **Para desenvolvedores:** Monitoramento contínuo de métricas de qualidade pode auxiliar na manutenção da qualidade interna
+- **Para projetos open-source:** Estabelecimento de práticas de revisão de código baseadas nas correlações encontradas
+- **Para pesquisadores:** Evidências empíricas sobre relações entre processo e qualidade em sistemas Java
+
+### 6.3 Limitações
+
+- Amostra limitada a repositórios Java populares do GitHub
+- Métricas CK capturam apenas aspectos estruturais da qualidade
+- Análise correlacional não estabelece relações causais
+- Possível viés de seleção devido ao critério de popularidade
+
+### 6.4 Trabalhos Futuros
+
 - Expandir análise para outras linguagens de programação
-- Desenvolver dashboard interativo para visualização dos dados
-- Investigar padrões de contribuição em projetos open-source
+- Incorporar métricas de qualidade externa (bugs, vulnerabilidades)
+- Análise longitudinal da evolução das métricas ao longo do tempo
+- Investigação de práticas de desenvolvimento que influenciam a qualidade
 
 ---
 
@@ -551,12 +696,12 @@ Os seguintes gráficos foram gerados para facilitar a análise:
 
 ## 10. Apêndices
 
-### A. Scripts utilizados
+### 10.1. Scripts utilizados
 - `main.py`: Script principal para coleta de dados e análise CK
 - `generate_report.py`: Script para geração deste relatório
 - Arquivos CSV: `{self.csv_file}` contendo todos os dados analisados
 
-### B. Dados coletados
+### 10.2. Dados coletados
 - **Total de repositórios analisados:** {len(self.df)}
 - **Período de coleta:** {datetime.now().strftime('%B %Y')}
 - **Critérios de seleção:** Repositórios Java com >1000 stars
@@ -606,8 +751,8 @@ Os seguintes gráficos foram gerados para facilitar a análise:
             print("Arquivos criados:")
             print("relatorio_tecnico.md - Relatório completo")
             print("grafico_histograma.png - Distribuição de idade")
-            print("grafico_barras.png - Linguagens de programação")
-            print("grafico_pizza.png - Distribuição de linguagens")
+            print("grafico_barras.png - Top 20 repositórios populares")
+            print("grafico_pizza.png - Distribuição por tamanho (LOC)")
             print("grafico_boxplot.png - Métricas principais")
             print("grafico_dispersao.png - Stars vs Releases")
             print("grafico_heatmap.png - Correlação entre métricas")
