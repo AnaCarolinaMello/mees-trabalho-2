@@ -510,14 +510,6 @@ Foram analisados **{len(self.df)} repositórios** Java populares do GitHub, apli
 
 ---
 
-## 3. Tecnologias e ferramentas utilizadas
-- **Linguagem de Programação:** Python 3.8+
-- **Frameworks/Bibliotecas:** Pandas, Matplotlib, Seaborn, NumPy, CK (Code Quality Metrics)
-- **APIs utilizadas:** GitHub GraphQL API
-- **Dependências:** requests, datetime, pathlib
-
----
-
 ## 3. Metodologia
 
 ### 3.1 Seleção de Repositórios
@@ -731,7 +723,10 @@ Os seguintes gráficos fornecem uma visão geral dos dados:
 
 ---
 
-## 6. Conclusão
+"""
+
+        # Seção de conclusão com interpolação correta
+        report += f"""## 6. Conclusão
 
 ### 6.1 Principais Achados
 
@@ -766,7 +761,7 @@ Este estudo analisou **{len(self.df)} repositórios** Java populares do GitHub, 
 
 ---
 
-## 9. Referências
+## 7. Referências
 - [GitHub GraphQL API Documentation](https://docs.github.com/en/graphql)
 - [CK Metrics Tool](https://github.com/mauricioaniche/ck)
 - [Biblioteca Pandas](https://pandas.pydata.org/)
@@ -775,14 +770,14 @@ Este estudo analisou **{len(self.df)} repositórios** Java populares do GitHub, 
 
 ---
 
-## 10. Apêndices
+## 8. Apêndices
 
-### 10.1. Scripts utilizados
+### 8.1 Scripts utilizados
 - `main.py`: Script principal para coleta de dados e análise CK
 - `generate_report.py`: Script para geração deste relatório
 - Arquivos CSV: `{self.csv_file}` contendo todos os dados analisados
 
-### 10.2. Dados coletados
+### 8.2 Dados coletados
 - **Total de repositórios analisados:** {len(self.df)}
 - **Período de coleta:** {datetime.now().strftime('%B %Y')}
 - **Critérios de seleção:** Repositórios Java com >1000 stars
