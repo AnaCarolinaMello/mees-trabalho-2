@@ -230,10 +230,32 @@ class ReportGenerator:
 
         return table
 
-    # def analyze_hypothesis(self, rq_result, hypothesis_id):
-    #     """Analisa uma hipótese baseada nos resultados da RQ - REMOVIDO"""
-    #     # Método comentado pois hipóteses informais foram removidas do relatório
-    #     pass
+    def analyze_hypothesis(self, rq_result, hypothesis_type):
+        """Analisa uma hipótese baseada nos resultados da RQ"""
+        correlations = rq_result['correlations']
+
+        # Verifica correlações significativas (p < 0.05)
+        significant_results = []
+        for metric, corr_data in correlations.items():
+            pearson_r = corr_data['pearson']['correlation']
+            pearson_p = corr_data['pearson']['p_value']
+
+            if pearson_p < 0.05:  # Significativa
+                if hypothesis_type in ['RQ01', 'RQ02', 'RQ04']:  # Espera-se MENOR CBO/DIT/LCOM (melhor qualidade)
+                    if pearson_r < 0:  # Correlação negativa = hipótese confirmada
+                        significant_results.append(f"{metric.upper()} (correlação negativa)")
+                    else:  # Correlação positiva = hipótese rejeitada
+                        significant_results.append(f"{metric.upper()} (correlação positiva - contraria hipótese)")
+                elif hypothesis_type == 'RQ03':  # Espera-se MAIOR CBO/DIT/LCOM (pior qualidade)
+                    if pearson_r > 0:  # Correlação positiva = hipótese confirmada
+                        significant_results.append(f"{metric.upper()} (correlação positiva)")
+                    else:  # Correlação negativa = hipótese rejeitada
+                        significant_results.append(f"{metric.upper()} (correlação negativa - contraria hipótese)")
+
+        if significant_results:
+            return f"Parcialmente suportada: correlações significativas encontradas com {', '.join(significant_results)}"
+        else:
+            return "Não suportada: nenhuma correlação significativa encontrada"
 
     def get_main_finding(self, rq_result):
         """Extrai o principal achado de uma questão de pesquisa"""
@@ -496,7 +518,7 @@ class ReportGenerator:
 - **Disciplina:** Laboratório de Experimentação de Software
 - **Período:** 6° Período
 - **Professor(a):** Prof. Dr. João Paulo Carneiro Aramuni
-- **Membros do Grupo:** [Lista de integrantes - Preencher conforme necessário]
+- **Membros do Grupo:** [Lista de integrantes - Ana Carolina Caldas de Mello, João Pedro Queiroz Rocha, Pedro Henrique Dias Câmara]
 
 ---
 
@@ -515,13 +537,20 @@ Foram analisados **{len(self.df)} repositórios** Java populares do GitHub, apli
 ### 3.1 Seleção de Repositórios
 Com o objetivo de analisar repositórios relevantes, escritos na linguagem Java, foram coletados **{len(self.df)} repositórios** Java populares do GitHub, calculando cada uma das métricas definidas na Seção 3.3.
 
-### 3.2 Questões de Pesquisa
+### 3.2 Questões de Pesquisa e Hipóteses
 Este laboratório tem o objetivo de responder às seguintes questões de pesquisa:
 
 - **RQ01:** Qual a relação entre a popularidade dos repositórios e as suas características de qualidade?
+  - *Hipótese:* Espera-se que repositórios mais populares tenham maior qualidade, visto que a maior qualidade atrairia mais atenção, tornando o repo mais popular. Além disso, a maior atenção de desenvolvedores levaria a mais mudanças visando qualidade.
+
 - **RQ02:** Qual a relação entre a maturidade dos repositórios e as suas características de qualidade?
+  - *Hipótese:* Espera-se que repositórios mais maduros tenham maior qualidade, visto a relação entre qualidade e longevidade do código.
+
 - **RQ03:** Qual a relação entre a atividade dos repositórios e as suas características de qualidade?
+  - *Hipótese:* Espera-se que repositórios ativos tenham menor qualidade, visto que um número maior de commits pode indicar uma menor diligência com a qualidade de código.
+
 - **RQ04:** Qual a relação entre o tamanho dos repositórios e as suas características de qualidade?
+  - *Hipótese:* Espera-se que repositórios maiores tenham maior qualidade, considerando a relação entre qualidade e escalabilidade de código.
 
 ### 3.3 Definição de Métricas
 Para cada questão de pesquisa, realizamos a comparação entre as características do processo de desenvolvimento dos repositórios e os valores obtidos para as métricas.
@@ -698,24 +727,45 @@ Os seguintes gráficos fornecem uma visão geral dos dados:
 
 ## 5. Discussão
 
-### 5.1 Padrões Observados
+### 5.1 Análise das Hipóteses
 
-#### 5.1.1 Correlações Encontradas
-- **Popularidade vs Qualidade:** Correlações positivas fracas com CBO (r=0.081) e DIT (r=0.115), indicando que repositórios mais populares tendem a ter maior acoplamento e complexidade estrutural.
-- **Maturidade vs Qualidade:** Correlações positivas fracas com todas as métricas CK, sugerindo que projetos mais antigos apresentam maior complexidade.
-- **Atividade vs Qualidade:** Correlações moderadas com CBO (r=0.275) e DIT (r=0.282), indicando forte relação entre atividade de desenvolvimento e complexidade.
-- **Tamanho vs Qualidade:** Correlações mais fortes em todas as métricas, confirmando que projetos maiores naturalmente apresentam maior complexidade estrutural.
+#### 5.1.1 RQ01 - Popularidade vs Qualidade
+**Hipótese:** Repositórios mais populares têm maior qualidade (menores valores de CBO, DIT, LCOM).
+**Resultado:** {self.analyze_hypothesis(rq_results['RQ01'], 'RQ01')}
 
-#### 5.1.2 Interpretação dos Resultados
-- **Contradição com expectativas:** Os resultados sugerem que popularidade e maturidade estão associadas a maior complexidade, não menor.
-- **Hipótese de funcionalidade:** Projetos populares podem priorizar funcionalidades e recursos sobre simplicidade arquitetural.
-- **Efeito do tamanho:** A correlação entre processo e qualidade pode ser mediada pelo tamanho dos projetos.
+**Interpretação:** As correlações positivas encontradas contradizem a hipótese inicial, sugerindo que repositórios mais populares apresentam maior acoplamento e complexidade. Isso pode indicar que a popularidade está mais relacionada à funcionalidade e utilidade do que à simplicidade arquitetural.
 
-#### 5.1.3 Significância Estatística
-- A maioria das correlações apresenta p-value < 0.05, indicando significância estatística.
-- Correlações de Spearman geralmente mais fortes que Pearson, sugerindo relações não-lineares.
+#### 5.1.2 RQ02 - Maturidade vs Qualidade
+**Hipótese:** Repositórios mais maduros têm maior qualidade devido ao refinamento ao longo do tempo.
+**Resultado:** {self.analyze_hypothesis(rq_results['RQ02'], 'RQ02')}
 
-### 5.2 Limitações do Estudo
+**Interpretação:** Os resultados sugerem que projetos mais antigos tendem a acumular complexidade ao invés de refinarem sua arquitetura, possivelmente devido ao acúmulo de funcionalidades e débito técnico.
+
+#### 5.1.3 RQ03 - Atividade vs Qualidade
+**Hipótese:** Repositórios mais ativos têm menor qualidade devido à menor diligência com qualidade.
+**Resultado:** {self.analyze_hypothesis(rq_results['RQ03'], 'RQ03')}
+
+**Interpretação:** A hipótese de que maior atividade resulta em menor qualidade é suportada pelos dados, com correlações positivas indicando que projetos com mais releases tendem a ter maior acoplamento e complexidade.
+
+#### 5.1.4 RQ04 - Tamanho vs Qualidade
+**Hipótese:** Repositórios maiores têm maior qualidade devido à necessidade de escalabilidade.
+**Resultado:** {self.analyze_hypothesis(rq_results['RQ04'], 'RQ04')}
+
+**Interpretação:** Contrariamente à hipótese, repositórios maiores apresentam maior acoplamento e complexidade, sugerindo que o crescimento do código tende a aumentar a complexidade estrutural.
+
+### 5.2 Padrões Observados
+
+#### 5.2.1 Correlações Encontradas
+- **Popularidade vs Qualidade:** Correlações positivas fracas, contradizendo expectativas iniciais
+- **Maturidade vs Qualidade:** Correlações positivas, indicando acúmulo de complexidade ao longo do tempo
+- **Atividade vs Qualidade:** Correlações moderadas positivas, suportando a hipótese de menor diligência
+- **Tamanho vs Qualidade:** Correlações mais fortes, confirmando relação entre tamanho e complexidade
+
+#### 5.2.2 Significância Estatística
+- A maioria das correlações apresenta p-value < 0.05, indicando significância estatística
+- Correlações de Spearman geralmente mais fortes que Pearson, sugerindo relações não-lineares
+
+### 5.3 Limitações do Estudo
 
 - Análise limitada a repositórios Java populares
 - Métricas CK podem não capturar todos os aspectos de qualidade
