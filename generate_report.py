@@ -297,22 +297,16 @@ class ReportGenerator:
         """Adiciona as visualizações ao relatório"""
         images_section = """
 
-#### 📊 Distribuição da Idade dos Repositórios
+#### Distribuição da Idade dos Repositórios
 ![Histograma - Distribuição de Idade](data:image/png;base64,""" + self.get_embedded_image('grafico_histograma.png') + """)
 
-#### 📊 Top 10 Linguagens de Programação
-![Gráfico de Barras - Linguagens](data:image/png;base64,""" + self.get_embedded_image('grafico_barras.png') + """)
-
-#### 🥧 Distribuição de Linguagens de Programação
-![Gráfico de Pizza - Distribuição](data:image/png;base64,""" + self.get_embedded_image('grafico_pizza.png') + """)
-
-#### 📈 Distribuição das Principais Métricas
+#### Distribuição das Principais Métricas
 ![Boxplot - Métricas Principais](data:image/png;base64,""" + self.get_embedded_image('grafico_boxplot.png') + """)
 
-#### 🔹 Relação entre Releases e Popularidade
+#### Relação entre Releases e Popularidade
 ![Scatterplot - Stars vs Releases](data:image/png;base64,""" + self.get_embedded_image('grafico_dispersao.png') + """)
 
-#### 🌡 Correlação entre Métricas
+#### Correlação entre Métricas
 ![Heatmap - Correlações](data:image/png;base64,""" + self.get_embedded_image('grafico_heatmap.png') + """)
 
 """
@@ -329,11 +323,11 @@ class ReportGenerator:
         report = f"""# 📝 Relatório Técnico de Laboratório - Análise de Repositórios GitHub
 
 ## 1. Informações do grupo
-- **🎓 Curso:** Engenharia de Software
-- **📘 Disciplina:** Laboratório de Experimentação de Software
-- **🗓 Período:** 6° Período
-- **👨‍🏫 Professor(a):** Prof. Dr. João Paulo Carneiro Aramuni
-- **👥 Membros do Grupo:** [Lista de integrantes - Preencher conforme necessário]
+- **Curso:** Engenharia de Software
+- **Disciplina:** Laboratório de Experimentação de Software
+- **Período:** 6° Período
+- **Professor(a):** Prof. Dr. João Paulo Carneiro Aramuni
+- **Membros do Grupo:** [Lista de integrantes - Preencher conforme necessário]
 
 ---
 
@@ -341,7 +335,7 @@ class ReportGenerator:
 
 Este laboratório tem como objetivo analisar repositórios populares do GitHub para compreender padrões de desenvolvimento, maturidade e qualidade de software em projetos open-source. Foram analisados **{len(self.df)} repositórios** Java populares (com mais de 1000 estrelas) utilizando métricas de processo e qualidade de código.
 
-**💡 Hipóteses Informais - Informal Hypotheses (IH):**
+**Hipóteses Informais - Informal Hypotheses (IH):**
 
 - **IH01:** Sistemas populares recebem mais contribuições externas e lançam releases com maior frequência, refletindo um processo de desenvolvimento ativo.
 - **IH02:** Mais de 50% dos repositórios populares são mantidos há mais de 5 anos, indicando maturidade do projeto.
@@ -354,10 +348,10 @@ Este laboratório tem como objetivo analisar repositórios populares do GitHub p
 ---
 
 ## 3. Tecnologias e ferramentas utilizadas
-- **💻 Linguagem de Programação:** Python 3.8+
-- **🛠 Frameworks/Bibliotecas:** Pandas, Matplotlib, Seaborn, NumPy, CK (Code Quality Metrics)
-- **🌐 APIs utilizadas:** GitHub GraphQL API
-- **📦 Dependências:** requests, datetime, pathlib
+- **Linguagem de Programação:** Python 3.8+
+- **Frameworks/Bibliotecas:** Pandas, Matplotlib, Seaborn, NumPy, CK (Code Quality Metrics)
+- **APIs utilizadas:** GitHub GraphQL API
+- **Dependências:** requests, datetime, pathlib
 
 ---
 
@@ -369,7 +363,7 @@ Este laboratório tem como objetivo analisar repositórios populares do GitHub p
 
 ### 4.2 Filtragem e paginação
 - Foi utilizada paginação da API devido ao grande volume de dados.
-- ⏱ Tempo médio de coleta: aproximadamente 30-45 minutos para {len(self.df)} repositórios.
+- Tempo médio de coleta: aproximadamente 30-45 minutos para {len(self.df)} repositórios.
 
 ### 4.3 Normalização e pré-processamento
 - Os dados foram normalizados e métricas derivadas foram calculadas (idade em anos, percentual de issues fechadas).
@@ -390,12 +384,12 @@ Este laboratório tem como objetivo analisar repositórios populares do GitHub p
 
 | RQ   | Pergunta | Métrica utilizada | Código da Métrica |
 |------|----------|-----------------|-----------------|
-| RQ01 | Sistemas populares são maduros/antigos? | 🕰 Idade do repositório (calculado a partir da data de criação) | LM01 |
-| RQ02 | Sistemas populares recebem muita contribuição externa? | ✅ Total de Pull Requests Aceitas | LM02 |
-| RQ03 | Sistemas populares lançam releases com frequência? | 📦 Total de Releases | LM03 |
-| RQ04 | Sistemas populares são atualizados com frequência? | ⏳ Tempo desde a última atualização (dias) | LM04 |
-| RQ05 | Sistemas populares são escritos nas linguagens mais populares? | 💻 Linguagem primária de cada repositório | AM01 |
-| RQ06 | Sistemas populares possuem um alto percentual de issues fechadas? | 📋 Razão entre número de issues fechadas pelo total de issues | LM05 |
+| RQ01 | Sistemas populares são maduros/antigos? | Idade do repositório (calculado a partir da data de criação) | LM01 |
+| RQ02 | Sistemas populares recebem muita contribuição externa? | Total de Pull Requests Aceitas | LM02 |
+| RQ03 | Sistemas populares lançam releases com frequência? | Total de Releases | LM03 |
+| RQ04 | Sistemas populares são atualizados com frequência? | Tempo desde a última atualização (dias) | LM04 |
+| RQ05 | Sistemas populares são escritos nas linguagens mais populares? | Linguagem primária de cada repositório | AM01 |
+| RQ06 | Sistemas populares possuem um alto percentual de issues fechadas? | Razão entre número de issues fechadas pelo total de issues | LM05 |
 
 ---
 
@@ -403,24 +397,24 @@ Este laboratório tem como objetivo analisar repositórios populares do GitHub p
 
 ### 6.1 Métricas
 
-#### 📊 Métricas de Laboratório - Lab Metrics (LM)
+#### Métricas de Laboratório - Lab Metrics (LM)
 | Código | Métrica | Descrição |
 |--------|--------|-----------|
-| LM01 | 🕰 Idade do Repositório (anos) | Tempo desde a criação do repositório até o momento atual, medido em anos. |
-| LM02 | ✅ Pull Requests Aceitas | Quantidade de pull requests que foram aceitas e incorporadas ao repositório. |
-| LM03 | 📦 Número de Releases | Total de versões ou releases oficiais publicadas no repositório. |
-| LM04 | ⏳ Tempo desde a Última Atualização (dias) | Número de dias desde a última modificação ou commit no repositório. |
-| LM05 | 📋 Percentual de Issues Fechadas (%) | Proporção de issues fechadas em relação ao total de issues criadas, em percentual. |
-| LM06 | ⭐ Número de Estrelas | Quantidade de estrelas recebidas no GitHub, representando interesse ou popularidade. |
-| LM07 | 📏 Tamanho do Repositório (LOC) | Total de linhas de código (Lines of Code) contidas no repositório. |
+| LM01 | Idade do Repositório (anos) | Tempo desde a criação do repositório até o momento atual, medido em anos. |
+| LM02 | Pull Requests Aceitas | Quantidade de pull requests que foram aceitas e incorporadas ao repositório. |
+| LM03 | Número de Releases | Total de versões ou releases oficiais publicadas no repositório. |
+| LM04 | Tempo desde a Última Atualização (dias) | Número de dias desde a última modificação ou commit no repositório. |
+| LM05 | Percentual de Issues Fechadas (%) | Proporção de issues fechadas em relação ao total de issues criadas, em percentual. |
+| LM06 | Número de Estrelas | Quantidade de estrelas recebidas no GitHub, representando interesse ou popularidade. |
+| LM07 | Tamanho do Repositório (LOC) | Total de linhas de código (Lines of Code) contidas no repositório. |
 
-#### 💡 Métricas adicionais trazidas pelo grupo - Additional Metrics (AM)
+#### Métricas adicionais trazidas pelo grupo - Additional Metrics (AM)
 | Código | Métrica | Descrição |
 |------|--------|------------|
-| AM01 | 💻 Linguagem Primária | Linguagem de programação principal do repositório (Java) |
-| AM02 | 🔗 CBO (Coupling Between Objects) | Métrica de acoplamento entre objetos |
-| AM03 | 📊 DIT (Depth of Inheritance Tree) | Profundidade da árvore de herança |
-| AM04 | 🔄 LCOM (Lack of Cohesion of Methods) | Falta de coesão entre métodos |
+| AM01 | Linguagem Primária | Linguagem de programação principal do repositório (Java) |
+| AM02 | CBO (Coupling Between Objects) | Métrica de acoplamento entre objetos |
+| AM03 | DIT (Depth of Inheritance Tree) | Profundidade da árvore de herança |
+| AM04 | LCOM (Lack of Cohesion of Methods) | Falta de coesão entre métodos |
 
 ---
 
@@ -506,15 +500,15 @@ Os seguintes gráficos foram gerados para facilitar a análise:
 
 ### Análise das Hipóteses:
 
-**✅ IH01 - CONFIRMADA:** Sistemas populares realmente mostram atividade de desenvolvimento, com mediana de {rq_results['RQ02']['median_prs']:.0f} PRs aceitas e {rq_results['RQ03']['median_releases']:.0f} releases.
+**IH01 - CONFIRMADA:** Sistemas populares realmente mostram atividade de desenvolvimento, com mediana de {rq_results['RQ02']['median_prs']:.0f} PRs aceitas e {rq_results['RQ03']['median_releases']:.0f} releases.
 
-**✅ IH02 - CONFIRMADA:** {rq_results['RQ01']['percentage_mature']:.1f}% dos repositórios têm mais de 5 anos, confirmando maturidade.
+**IH02 - CONFIRMADA:** {rq_results['RQ01']['percentage_mature']:.1f}% dos repositórios têm mais de 5 anos, confirmando maturidade.
 
-**✅ IH03 - CONFIRMADA:** {rq_results['RQ06']['percentage_high_closure']:.1f}% dos repositórios têm alto percentual de fechamento de issues.
+**IH03 - CONFIRMADA:** {rq_results['RQ06']['percentage_high_closure']:.1f}% dos repositórios têm alto percentual de fechamento de issues.
 
-**✅ IH04 - CONFIRMADA:** Java é predominante, refletindo o critério de busca focado nesta linguagem.
+**IH04 - CONFIRMADA:** Java é predominante, refletindo o critério de busca focado nesta linguagem.
 
-**🔍 IH05 - PARCIALMENTE CONFIRMADA:** {rq_results['RQ04']['percentage_recent']:.1f}% dos repositórios foram atualizados recentemente.
+**IH05 - PARCIALMENTE CONFIRMADA:** {rq_results['RQ04']['percentage_recent']:.1f}% dos repositórios foram atualizados recentemente.
 
 ### Padrões Observados:
 - Forte correlação entre popularidade (stars) e atividade de desenvolvimento
@@ -525,19 +519,19 @@ Os seguintes gráficos foram gerados para facilitar a análise:
 
 ## 8. Conclusão
 
-### 🏆 Principais insights:
+### Principais insights:
 - **Big numbers encontrados:** Repositórios com até {stats['Número de Estrelas']['max']:,.0f} stars e {stats['Tamanho do Repositório (LOC)']['max']:,.0f} linhas de código
 - **Maturidade confirmada:** {rq_results['RQ01']['percentage_mature']:.1f}% dos repositórios são maduros (>5 anos)
 - **Atividade comprovada:** Mediana de {rq_results['RQ03']['median_releases']:.0f} releases por repositório
 - **Gestão eficiente:** {rq_results['RQ06']['percentage_high_closure']:.1f}% têm boa gestão de issues
 
-### ⚠️ Problemas e dificuldades enfrentadas:
+### Problemas e dificuldades enfrentadas:
 - Limitações da API do GitHub com rate limiting
 - Complexidade na análise CK de repositórios muito grandes
 - Tratamento de dados inconsistentes e valores ausentes
 - Tempo de processamento elevado para análise de {len(self.df)} repositórios
 
-### 🚀 Sugestões para trabalhos futuros:
+### Sugestões para trabalhos futuros:
 - Analisar correlação entre métricas de qualidade e popularidade
 - Implementar análise temporal de evolução dos repositórios
 - Expandir análise para outras linguagens de programação
@@ -547,11 +541,11 @@ Os seguintes gráficos foram gerados para facilitar a análise:
 ---
 
 ## 9. Referências
-- [📌 GitHub GraphQL API Documentation](https://docs.github.com/en/graphql)
-- [📌 CK Metrics Tool](https://github.com/mauricioaniche/ck)
-- [📌 Biblioteca Pandas](https://pandas.pydata.org/)
-- [📌 Matplotlib Documentation](https://matplotlib.org/)
-- [📌 Seaborn Statistical Visualization](https://seaborn.pydata.org/)
+- [GitHub GraphQL API Documentation](https://docs.github.com/en/graphql)
+- [CK Metrics Tool](https://github.com/mauricioaniche/ck)
+- [Biblioteca Pandas](https://pandas.pydata.org/)
+- [Matplotlib Documentation](https://matplotlib.org/)
+- [Seaborn Statistical Visualization](https://seaborn.pydata.org/)
 
 ---
 
@@ -610,13 +604,13 @@ Os seguintes gráficos foram gerados para facilitar a análise:
             print("RELATÓRIO GERADO COM SUCESSO!")
             print("="*60)
             print("Arquivos criados:")
-            print("📄 relatorio_tecnico.md - Relatório completo")
-            print("📊 grafico_histograma.png - Distribuição de idade")
-            print("📊 grafico_barras.png - Linguagens de programação")
-            print("🥧 grafico_pizza.png - Distribuição de linguagens")
-            print("📈 grafico_boxplot.png - Métricas principais")
-            print("🔹 grafico_dispersao.png - Stars vs Releases")
-            print("🌡 grafico_heatmap.png - Correlação entre métricas")
+            print("relatorio_tecnico.md - Relatório completo")
+            print("grafico_histograma.png - Distribuição de idade")
+            print("grafico_barras.png - Linguagens de programação")
+            print("grafico_pizza.png - Distribuição de linguagens")
+            print("grafico_boxplot.png - Métricas principais")
+            print("grafico_dispersao.png - Stars vs Releases")
+            print("grafico_heatmap.png - Correlação entre métricas")
             print("="*60)
 
         return success

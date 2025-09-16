@@ -80,10 +80,10 @@ def main():
 
     try:
         merged_df = merge_csv_files(file1, file2, output)
-        print(f"\n✅ Successfully merged files! Output: {output}")
+        print(f"\nSuccessfully merged files! Output: {output}")
 
     except Exception as e:
-        print(f"❌ Error merging files: {e}")
+        print(f"Error merging files: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
