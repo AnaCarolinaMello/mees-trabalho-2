@@ -196,49 +196,44 @@ class ReportGenerator:
             spearman_r = corr_data['spearman']['correlation']
             spearman_p = corr_data['spearman']['p_value']
 
-            # Interpretação da correlação
-            if abs(pearson_r) < 0.1:
-                interpretation = "Correlação desprezível"
-            elif abs(pearson_r) < 0.3:
-                interpretation = "Correlação fraca"
-            elif abs(pearson_r) < 0.5:
-                interpretation = "Correlação moderada"
-            elif abs(pearson_r) < 0.7:
-                interpretation = "Correlação forte"
-            else:
-                interpretation = "Correlação muito forte"
+            # Interpretação da correlação baseada na magnitude E significância
+            magnitude = abs(pearson_r)
+            is_significant = pearson_p < 0.05
 
-            # Adiciona significância
-            if pearson_p < 0.05:
-                interpretation += " (significativa)"
+            if magnitude < 0.1:
+                if is_significant:
+                    interpretation = "Correlação detectável"
+                else:
+                    interpretation = "Correlação inexistente"
+            elif magnitude < 0.3:
+                if is_significant:
+                    interpretation = "Correlação fraca"
+                else:
+                    interpretation = "Correlação fraca (não confiável)"
+            elif magnitude < 0.5:
+                if is_significant:
+                    interpretation = "Correlação moderada"
+                else:
+                    interpretation = "Correlação moderada (não confiável)"
+            elif magnitude < 0.7:
+                if is_significant:
+                    interpretation = "Correlação forte"
+                else:
+                    interpretation = "Correlação forte (não confiável)"
             else:
-                interpretation += " (não significativa)"
+                if is_significant:
+                    interpretation = "Correlação muito forte"
+                else:
+                    interpretation = "Correlação muito forte (não confiável)"
 
             table += f"| {metric.upper()} | {pearson_r:.3f} | {pearson_p:.3f} | {spearman_r:.3f} | {spearman_p:.3f} | {interpretation} |\n"
 
         return table
 
-    def analyze_hypothesis(self, rq_result, hypothesis_id):
-        """Analisa uma hipótese baseada nos resultados da RQ"""
-        correlations = rq_result['correlations']
-
-        # Conta correlações significativas
-        significant_corrs = []
-        for metric, corr_data in correlations.items():
-            if corr_data['pearson']['p_value'] < 0.05:
-                significant_corrs.append(f"{metric.upper()}")
-
-        if significant_corrs:
-            if hypothesis_id == 'H1':
-                return f"PARCIALMENTE CONFIRMADA - Encontradas correlações significativas com {', '.join(significant_corrs)}"
-            elif hypothesis_id == 'H2':
-                return f"PARCIALMENTE CONFIRMADA - Encontradas correlações significativas com {', '.join(significant_corrs)}"
-            elif hypothesis_id == 'H3':
-                return f"PARCIALMENTE CONFIRMADA - Encontradas correlações significativas com {', '.join(significant_corrs)}"
-            elif hypothesis_id == 'H4':
-                return f"CONFIRMADA - Encontradas correlações significativas com {', '.join(significant_corrs)}"
-        else:
-            return "NÃO CONFIRMADA - Nenhuma correlação significativa encontrada"
+    # def analyze_hypothesis(self, rq_result, hypothesis_id):
+    #     """Analisa uma hipótese baseada nos resultados da RQ - REMOVIDO"""
+    #     # Método comentado pois hipóteses informais foram removidas do relatório
+    #     pass
 
     def get_main_finding(self, rq_result):
         """Extrai o principal achado de uma questão de pesquisa"""
@@ -405,31 +400,20 @@ class ReportGenerator:
         print("Visualizações geradas com sucesso!")
 
     def add_visualizations_to_report(self, report):
-        """Adiciona as visualizações ao relatório"""
-        images_section = """
-
-#### Distribuição da Idade dos Repositórios
-![Histograma - Distribuição de Idade](data:image/png;base64,""" + self.get_embedded_image('grafico_histograma.png') + """)
-
-#### Top 20 Repositórios por Popularidade
-![Gráfico de Barras - Top Repositórios](data:image/png;base64,""" + self.get_embedded_image('grafico_barras.png') + """)
-
-#### Distribuição por Tamanho do Código
-![Gráfico de Pizza - Distribuição por LOC](data:image/png;base64,""" + self.get_embedded_image('grafico_pizza.png') + """)
+        """Adiciona as visualizações gerais ao relatório"""
+        # Seção de visualizações gerais (apenas gráficos não associados às RQs)
+        general_images = """
 
 #### Distribuição das Principais Métricas
 ![Boxplot - Métricas Principais](data:image/png;base64,""" + self.get_embedded_image('grafico_boxplot.png') + """)
 
-#### Relação entre Releases e Popularidade
-![Scatterplot - Stars vs Releases](data:image/png;base64,""" + self.get_embedded_image('grafico_dispersao.png') + """)
-
-#### Correlação entre Métricas
+#### Correlação entre Todas as Métricas
 ![Heatmap - Correlações](data:image/png;base64,""" + self.get_embedded_image('grafico_heatmap.png') + """)
 
 """
 
-        # Insere as imagens antes da seção "Discussão"
-        return report.replace("---\n\n## 5. Discussão", images_section + "\n---\n\n## 5. Discussão")
+        # Insere as imagens gerais antes da seção "Discussão"
+        return report.replace("---\n\n## 5. Discussão", general_images + "\n---\n\n## 5. Discussão")
 
     def generate_markdown_report(self):
         """Gera o relatório completo em Markdown"""
@@ -453,16 +437,7 @@ No processo de desenvolvimento de sistemas open-source, em que diversos desenvol
 
 Neste contexto, o objetivo deste laboratório é analisar aspectos da qualidade de repositórios desenvolvidos na linguagem Java, correlacionando-os com características do seu processo de desenvolvimento, sob a perspectiva de métricas de produto calculadas através da ferramenta CK.
 
-Foram analisados **{len(self.df)} repositórios** Java populares do GitHub, aplicando métricas de processo e qualidade de código.
-
-### Hipóteses Informais
-
-- **H1:** Repositórios mais populares (maior número de estrelas) tendem a apresentar melhores características de qualidade interna, com menores valores de acoplamento (CBO) e maior coesão.
-- **H2:** Repositórios mais maduros (mais antigos) apresentam melhor qualidade de código, devido ao processo de refinamento ao longo do tempo.
-- **H3:** Repositórios mais ativos (maior número de releases) mantêm características de qualidade estáveis, indicando práticas de desenvolvimento controladas.
-- **H4:** Repositórios maiores (mais linhas de código) tendem a apresentar maior complexidade e acoplamento, resultando em valores mais altos de métricas como CBO e DIT.
-- **H5:** Existe uma correlação positiva entre o tamanho do repositório e a profundidade da árvore de herança (DIT).
-- **H6:** Repositórios com maior atividade de desenvolvimento apresentam melhor coesão de métodos (menores valores de LCOM).
+Foram analisados **{len(self.df)} repositórios** Java populares do GitHub, aplicando métricas de processo e qualidade de código para investigar as relações entre características do processo de desenvolvimento e métricas de qualidade estrutural.
 
 ---
 
@@ -490,7 +465,7 @@ Este laboratório tem o objetivo de responder às seguintes questões de pesquis
 ### 3.3 Definição de Métricas
 Para cada questão de pesquisa, realizamos a comparação entre as características do processo de desenvolvimento dos repositórios e os valores obtidos para as métricas.
 
-**Métricas de Processo:**
+**Métricas de Projeto:**
 - **Popularidade:** número de estrelas
 - **Tamanho:** linhas de código (LOC)
 - **Atividade:** número de releases
@@ -515,12 +490,12 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
 
 ### 4.1 Estatísticas Descritivas
 
-#### Métricas de Processo
+#### Métricas de Projeto
 | Métrica | Média | Mediana | Desvio Padrão | Mínimo | Máximo |
 |---------|-------|---------|---------------|--------|--------|
 """
 
-        # Adiciona estatísticas das métricas de processo
+        # Adiciona estatísticas das métricas de projeto
         process_metrics = {
             'Popularidade (Stars)': 'stars',
             'Maturidade (Anos)': 'age_years',
@@ -558,13 +533,16 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
 
 ### 4.2 Análise das Questões de Pesquisa
 
-#### RQ01: {rq_results['RQ01']['question']}
-**Métrica de Processo:** {rq_results['RQ01']['metric']}
+"""
 
-**Estatísticas Descritivas:**
-- Média: {rq_results['RQ01']['summary_stats']['mean']:.2f}
-- Mediana: {rq_results['RQ01']['summary_stats']['median']:.2f}
-- Desvio Padrão: {rq_results['RQ01']['summary_stats']['std']:.2f}
+        # RQ01
+        rq01_stats = rq_results['RQ01']['summary_stats']
+        report += f"""#### RQ01: {rq_results['RQ01']['question']}
+
+**{rq_results['RQ01']['metric']}:**
+- Média: {rq01_stats['mean']:.2f}
+- Mediana: {rq01_stats['median']:.2f}
+- Desvio Padrão: {rq01_stats['std']:.2f}
 
 **Correlações com Métricas de Qualidade:**"""
 
@@ -573,13 +551,19 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
 
         report += f"""
 
-#### RQ02: {rq_results['RQ02']['question']}
-**Métrica de Processo:** {rq_results['RQ02']['metric']}
+**Gráfico de Apoio - RQ01:**
+![Top 20 Repositórios por Popularidade](data:image/png;base64,""" + self.get_embedded_image('grafico_barras.png') + """)
 
-**Estatísticas Descritivas:**
-- Média: {rq_results['RQ02']['summary_stats']['mean']:.2f}
-- Mediana: {rq_results['RQ02']['summary_stats']['median']:.2f}
-- Desvio Padrão: {rq_results['RQ02']['summary_stats']['std']:.2f}
+"""
+
+        # RQ02
+        rq02_stats = rq_results['RQ02']['summary_stats']
+        report += f"""#### RQ02: {rq_results['RQ02']['question']}
+
+**{rq_results['RQ02']['metric']}:**
+- Média: {rq02_stats['mean']:.2f}
+- Mediana: {rq02_stats['median']:.2f}
+- Desvio Padrão: {rq02_stats['std']:.2f}
 
 **Correlações com Métricas de Qualidade:**"""
 
@@ -588,13 +572,19 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
 
         report += f"""
 
-#### RQ03: {rq_results['RQ03']['question']}
-**Métrica de Processo:** {rq_results['RQ03']['metric']}
+**Gráfico de Apoio - RQ02:**
+![Distribuição da Idade dos Repositórios](data:image/png;base64,""" + self.get_embedded_image('grafico_histograma.png') + """)
 
-**Estatísticas Descritivas:**
-- Média: {rq_results['RQ03']['summary_stats']['mean']:.2f}
-- Mediana: {rq_results['RQ03']['summary_stats']['median']:.2f}
-- Desvio Padrão: {rq_results['RQ03']['summary_stats']['std']:.2f}
+"""
+
+        # RQ03
+        rq03_stats = rq_results['RQ03']['summary_stats']
+        report += f"""#### RQ03: {rq_results['RQ03']['question']}
+
+**{rq_results['RQ03']['metric']}:**
+- Média: {rq03_stats['mean']:.2f}
+- Mediana: {rq03_stats['median']:.2f}
+- Desvio Padrão: {rq03_stats['std']:.2f}
 
 **Correlações com Métricas de Qualidade:**"""
 
@@ -603,13 +593,19 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
 
         report += f"""
 
-#### RQ04: {rq_results['RQ04']['question']}
-**Métrica de Processo:** {rq_results['RQ04']['metric']}
+**Gráfico de Apoio - RQ03:**
+![Relação entre Releases e Popularidade](data:image/png;base64,""" + self.get_embedded_image('grafico_dispersao.png') + """)
 
-**Estatísticas Descritivas:**
-- Média: {rq_results['RQ04']['summary_stats']['mean']:.2f}
-- Mediana: {rq_results['RQ04']['summary_stats']['median']:.2f}
-- Desvio Padrão: {rq_results['RQ04']['summary_stats']['std']:.2f}
+"""
+
+        # RQ04
+        rq04_stats = rq_results['RQ04']['summary_stats']
+        report += f"""#### RQ04: {rq_results['RQ04']['question']}
+
+**{rq_results['RQ04']['metric']}:**
+- Média: {rq04_stats['mean']:.2f}
+- Mediana: {rq04_stats['median']:.2f}
+- Desvio Padrão: {rq04_stats['std']:.2f}
 
 **Correlações com Métricas de Qualidade:**"""
 
@@ -618,31 +614,35 @@ Para análise das métricas de popularidade, atividade e maturidade, foram colet
 
         report += f"""
 
-### 4.3 Visualizações dos Dados
+**Gráfico de Apoio - RQ04:**
+![Distribuição por Tamanho do Código](data:image/png;base64,""" + self.get_embedded_image('grafico_pizza.png') + """)
 
-Os seguintes gráficos foram gerados para facilitar a análise:
+### 4.3 Visualizações Gerais
+
+Os seguintes gráficos fornecem uma visão geral dos dados:
 
 ---
 
 ## 5. Discussão
 
-### 5.1 Análise das Hipóteses
+### 5.1 Padrões Observados
 
-**H1 - Popularidade vs Qualidade:** {self.analyze_hypothesis(rq_results['RQ01'], 'H1')}
+#### 5.1.1 Correlações Encontradas
+- **Popularidade vs Qualidade:** Correlações positivas fracas com CBO (r=0.081) e DIT (r=0.115), indicando que repositórios mais populares tendem a ter maior acoplamento e complexidade estrutural.
+- **Maturidade vs Qualidade:** Correlações positivas fracas com todas as métricas CK, sugerindo que projetos mais antigos apresentam maior complexidade.
+- **Atividade vs Qualidade:** Correlações moderadas com CBO (r=0.275) e DIT (r=0.282), indicando forte relação entre atividade de desenvolvimento e complexidade.
+- **Tamanho vs Qualidade:** Correlações mais fortes em todas as métricas, confirmando que projetos maiores naturalmente apresentam maior complexidade estrutural.
 
-**H2 - Maturidade vs Qualidade:** {self.analyze_hypothesis(rq_results['RQ02'], 'H2')}
+#### 5.1.2 Interpretação dos Resultados
+- **Contradição com expectativas:** Os resultados sugerem que popularidade e maturidade estão associadas a maior complexidade, não menor.
+- **Hipótese de funcionalidade:** Projetos populares podem priorizar funcionalidades e recursos sobre simplicidade arquitetural.
+- **Efeito do tamanho:** A correlação entre processo e qualidade pode ser mediada pelo tamanho dos projetos.
 
-**H3 - Atividade vs Qualidade:** {self.analyze_hypothesis(rq_results['RQ03'], 'H3')}
+#### 5.1.3 Significância Estatística
+- A maioria das correlações apresenta p-value < 0.05, indicando significância estatística.
+- Correlações de Spearman geralmente mais fortes que Pearson, sugerindo relações não-lineares.
 
-**H4 - Tamanho vs Qualidade:** {self.analyze_hypothesis(rq_results['RQ04'], 'H4')}
-
-### 5.2 Padrões Observados
-
-- **Correlações significativas encontradas:** Análise das correlações com p-value < 0.05
-- **Métricas de qualidade:** Variação dos valores de CBO, DIT e LCOM entre repositórios
-- **Características de processo:** Distribuição das métricas de popularidade, maturidade, atividade e tamanho
-
-### 5.3 Limitações do Estudo
+### 5.2 Limitações do Estudo
 
 - Análise limitada a repositórios Java populares
 - Métricas CK podem não capturar todos os aspectos de qualidade
