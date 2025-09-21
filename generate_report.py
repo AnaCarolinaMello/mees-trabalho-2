@@ -528,14 +528,14 @@ No processo de desenvolvimento de sistemas open-source, em que diversos desenvol
 
 Neste contexto, o objetivo deste laboratório é analisar aspectos da qualidade de repositórios desenvolvidos na linguagem Java, correlacionando-os com características do seu processo de desenvolvimento, sob a perspectiva de métricas de produto calculadas através da ferramenta CK.
 
-Foram analisados **{len(self.df)} repositórios** Java populares do GitHub, aplicando métricas de processo e qualidade de código para investigar as relações entre características do processo de desenvolvimento e métricas de qualidade estrutural.
+Foram analisados **" + str(len(self.df)) + " repositórios** Java populares do GitHub, aplicando métricas de processo e qualidade de código para investigar as relações entre características do processo de desenvolvimento e métricas de qualidade estrutural.
 
 ---
 
 ## 3. Metodologia
 
 ### 3.1 Seleção de Repositórios
-Com o objetivo de analisar repositórios relevantes, escritos na linguagem Java, foram coletados **{len(self.df)} repositórios** Java populares do GitHub, calculando cada uma das métricas definidas na Seção 3.3.
+Com o objetivo de analisar repositórios relevantes, escritos na linguagem Java, foram coletados **" + str(len(self.df)) + " repositórios** Java populares do GitHub, calculando cada uma das métricas definidas na Seção 3.3.
 
 ### 3.2 Questões de Pesquisa e Hipóteses
 Este laboratório tem o objetivo de responder às seguintes questões de pesquisa:
@@ -731,25 +731,25 @@ Os seguintes gráficos fornecem uma visão geral dos dados:
 
 #### 5.1.1 RQ01 - Popularidade vs Qualidade
 **Hipótese:** Repositórios mais populares têm maior qualidade (menores valores de CBO, DIT, LCOM).
-**Resultado:** {self.analyze_hypothesis(rq_results['RQ01'], 'RQ01')}
+**Resultado:** """ + self.analyze_hypothesis(rq_results['RQ01'], 'RQ01') + """
 
 **Interpretação:** As correlações positivas encontradas contradizem a hipótese inicial, sugerindo que repositórios mais populares apresentam maior acoplamento e complexidade. Isso pode indicar que a popularidade está mais relacionada à funcionalidade e utilidade do que à simplicidade arquitetural.
 
 #### 5.1.2 RQ02 - Maturidade vs Qualidade
 **Hipótese:** Repositórios mais maduros têm maior qualidade devido ao refinamento ao longo do tempo.
-**Resultado:** {self.analyze_hypothesis(rq_results['RQ02'], 'RQ02')}
+**Resultado:** """ + self.analyze_hypothesis(rq_results['RQ02'], 'RQ02') + """
 
 **Interpretação:** Os resultados sugerem que projetos mais antigos tendem a acumular complexidade ao invés de refinarem sua arquitetura, possivelmente devido ao acúmulo de funcionalidades e débito técnico.
 
 #### 5.1.3 RQ03 - Atividade vs Qualidade
 **Hipótese:** Repositórios mais ativos têm menor qualidade devido à menor diligência com qualidade.
-**Resultado:** {self.analyze_hypothesis(rq_results['RQ03'], 'RQ03')}
+**Resultado:** """ + self.analyze_hypothesis(rq_results['RQ03'], 'RQ03') + """
 
 **Interpretação:** A hipótese de que maior atividade resulta em menor qualidade é suportada pelos dados, com correlações positivas indicando que projetos com mais releases tendem a ter maior acoplamento e complexidade.
 
 #### 5.1.4 RQ04 - Tamanho vs Qualidade
 **Hipótese:** Repositórios maiores têm maior qualidade devido à necessidade de escalabilidade.
-**Resultado:** {self.analyze_hypothesis(rq_results['RQ04'], 'RQ04')}
+**Resultado:** """ + self.analyze_hypothesis(rq_results['RQ04'], 'RQ04') + """
 
 **Interpretação:** Contrariamente à hipótese, repositórios maiores apresentam maior acoplamento e complexidade, sugerindo que o crescimento do código tende a aumentar a complexidade estrutural.
 
@@ -780,14 +780,14 @@ Os seguintes gráficos fornecem uma visão geral dos dados:
 
 ### 6.1 Principais Achados
 
-Este estudo analisou **{len(self.df)} repositórios** Java populares do GitHub, investigando as relações entre características de processo de desenvolvimento e métricas de qualidade de código calculadas pela ferramenta CK.
+Este estudo analisou **" + str(len(self.df)) + " repositórios** Java populares do GitHub, investigando as relações entre características de processo de desenvolvimento e métricas de qualidade de código calculadas pela ferramenta CK.
 
 **Resultados por Questão de Pesquisa:**
 
-- **RQ01 (Popularidade vs Qualidade):** {self.get_main_finding(rq_results['RQ01'])}
-- **RQ02 (Maturidade vs Qualidade):** {self.get_main_finding(rq_results['RQ02'])}
-- **RQ03 (Atividade vs Qualidade):** {self.get_main_finding(rq_results['RQ03'])}
-- **RQ04 (Tamanho vs Qualidade):** {self.get_main_finding(rq_results['RQ04'])}
+- **RQ01 (Popularidade vs Qualidade):** """ + self.get_main_finding(rq_results['RQ01']) + """
+- **RQ02 (Maturidade vs Qualidade):** """ + self.get_main_finding(rq_results['RQ02']) + """
+- **RQ03 (Atividade vs Qualidade):** """ + self.get_main_finding(rq_results['RQ03']) + """
+- **RQ04 (Tamanho vs Qualidade):** """ + self.get_main_finding(rq_results['RQ04']) + """
 
 ### 6.2 Implicações Práticas
 
@@ -825,16 +825,16 @@ Este estudo analisou **{len(self.df)} repositórios** Java populares do GitHub, 
 ### 8.1 Scripts utilizados
 - `main.py`: Script principal para coleta de dados e análise CK
 - `generate_report.py`: Script para geração deste relatório
-- Arquivos CSV: `{self.csv_file}` contendo todos os dados analisados
+- Arquivos CSV: `""" + self.csv_file + """` contendo todos os dados analisados
 
 ### 8.2 Dados coletados
-- **Total de repositórios analisados:** {len(self.df)}
-- **Período de coleta:** {datetime.now().strftime('%B %Y')}
+- **Total de repositórios analisados:** " + str(len(self.df)) + "
+- **Período de coleta:** " + datetime.now().strftime('%B %Y') + "
 - **Critérios de seleção:** Repositórios Java com >1000 stars
 
 ---
 
-*Relatório gerado automaticamente em {datetime.now().strftime('%d/%m/%Y às %H:%M')}*
+*Relatório gerado automaticamente em " + datetime.now().strftime('%d/%m/%Y às %H:%M') + "*
 """
 
         return report
